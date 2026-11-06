@@ -24,7 +24,7 @@ const html = await readFile(path.join(root, 'archive/index-2019-05-19.html'), 'u
 const languageScript = html.match(/<script[^>]*>([\s\S]*?var csv[\s\S]*?)<\/script>/i);
 if (!languageScript) throw new Error('Original language table missing');
 const revision = createHash('sha256').update((await Promise.all(
-  ['bootstrap.js', 'input.js', 'restore.js'].map(name => readFile(path.join(root, 'public/src', name), 'utf8'))
+  ['bootstrap.js', 'input.js', 'restore.js', 'gameplayTips.js'].map(name => readFile(path.join(root, 'public/src', name), 'utf8'))
 )).join('\n')).digest('hex').slice(0, 12);
 let body = html.slice(html.indexOf('<body>'));
 body = body.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');

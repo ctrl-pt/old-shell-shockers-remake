@@ -5,3 +5,6 @@ var gameplayTips = [
   'Hold Q to charge a grenade, then release it to throw.',
   'Aim for the center of the shell for maximum damage.'
 ];
+function getRandomGameplayTip() {
+  return gameplayTips[Math.floor(Math.random() * gameplayTips.length)];
+}

@@ -50,11 +50,15 @@ async function setup({ localSimulation = false } = {}) {
     Math: Object.assign(Object.create(Math), { radAdd: (a, b) => (a + b + 2 * Math.PI) % (2 * Math.PI),
       clamp: (x, min, max) => Math.max(min, Math.min(max, x)) }),
     playerAccount: {}, ws: { send: data => sent.push(new Uint8Array(data)) },
-    doFirstPersonCamera() {}, reticle: { show() {} }, addCanvasListeners() {},
-    showGameMenu() { element('gameMenu').style.display = 'block'; }, notify() {}, updateLogic() {},
+    doFirstPersonCamera() {}, reticle: { show() {}, hide() {} }, addCanvasListeners() {},
+    hideSpinner() {}, hideDarkOverlay() {}, showCornerButtons() {}, removeCanvasListeners() {},
+    timeout: { set() {} }, notify() {}, updateLogic() {},
   });
   context.window = context;
   context.shell2019 = { run: source => vm.runInContext(source, context), getState: () => ({ me: player }) };
+  const archived = fs.readFileSync('archive/client/shellshock.min.js', 'utf8');
+  vm.runInContext(archived.slice(archived.indexOf('function showGameMenu()'), archived.indexOf('function setRespawnTime(')), context);
+  vm.runInContext(fs.readFileSync('public/src/gameplayTips.js', 'utf8'), context);
   vm.runInContext(fs.readFileSync('public/src/input.js', 'utf8'), context);
   vm.runInContext(fs.readFileSync('public/src/restore.js', 'utf8'), context);
   context.onload(); context.preservationControls.activate();
@@ -113,6 +117,7 @@ test('blur and Escape release movement and resume restores canvas focus', async 
     s.doc.dispatchEvent(event('keydown', { key: 'd' }));
     s.doc.dispatchEvent(event('keydown', { key: 'Escape' }));
     assert.equal(s.player.controlKeys, 0); assert.equal(s.element('gameMenu').style.display, 'block');
+    assert.ok(s.element('gameplayTip').innerHTML, 'the original menu can load its gameplay tip');
     s.doc.dispatchEvent(event('keydown', { key: 'w' })); assert.equal(s.player.controlKeys, 0);
     s.context.extern.respawn(); assert.equal(s.doc.activeElement, s.canvas);
     s.doc.dispatchEvent(event('keydown', { key: 'w' })); assert.equal(s.player.controlKeys, 1);
