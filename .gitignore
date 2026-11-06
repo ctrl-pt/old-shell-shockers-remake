@@ -1,6 +1,10 @@
 node_modules/
 tools/
 .env
+.env.*
+!.env.example
+.host/
+.vercel/
 dist/
 artifacts/
 outputs/

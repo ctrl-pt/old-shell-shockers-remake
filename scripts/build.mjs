@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -19,6 +19,9 @@ setNow:function(time){now=time},setSpatula:function(s){spatula=s}};
 await writeFile(path.join(root, 'public/src/headless.js'), `/* Extracted unchanged physics and weapon tuning; recovered historical maps appended. */\nglobalThis.createShellCore=function(){var BABYLON=globalThis.BABYLON,Math=Object.create(globalThis.Math);${shared}minMaps.push.apply(minMaps,${historicalMaps});${exports}};`);
 await cp(path.join(root, 'shared/room.mjs'), path.join(root, 'public/src/room.mjs'));
 await cp(path.join(root, 'shared/world.mjs'), path.join(root, 'public/src/world.mjs'));
-await mkdir(path.join(root, 'dist'), { recursive: true });
-await cp(path.join(root, 'public'), path.join(root, 'dist'), { recursive: true });
+const destination = path.resolve(root, 'dist');
+if (path.dirname(destination) !== root) throw new Error('Build output must stay inside the project');
+await rm(destination, { recursive: true, force: true });
+await mkdir(destination, { recursive: true });
+await cp(path.join(root, 'public'), destination, { recursive: true });
 console.log('Built the original client, shared physics, and browser practice server.');
