@@ -10,15 +10,28 @@ shell2019.run(`
   playerAccount.hideAds=true;
   if(s2019Practice)inviteFriends=function(){notify('Practice runs in this browser. For shared games, run or connect to the included multiplayer server.',6000)};
   var preservationDragLook=false;
+  inputDown=eval('('+inputDown.toString().replace(/document.pointerLockElement/g,'(document.pointerLockElement||preservationDragLook)')+')');
+  inputUp=eval('('+inputUp.toString().replace(/document.pointerLockElement/g,'(document.pointerLockElement||preservationDragLook)')+')');
+  var originalKeyDown=onKeyDown;
+  onKeyDown=function(event){
+    if(event.key==='Escape'&&preservationDragLook){
+      preservationDragLook=false;me.controlKeys=0;me.releaseTrigger();showGameMenu();return;
+    }
+    originalKeyDown(event);
+  };
   var originalMouseMove=onCanvasMouseMove;
+  var lastDragPoint={x:0,y:0},originalMouseDown=onCanvasMouseDown;
+  onCanvasMouseDown=function(event){lastDragPoint={x:event.clientX,y:event.clientY};originalMouseDown(event)};
   onCanvasMouseMove=function(event){
     if(!preservationDragLook || document.pointerLockElement){originalMouseMove(event);return}
+    var mx=event.clientX-lastDragPoint.x,my=event.clientY-lastDragPoint.y;
+    lastDragPoint={x:event.clientX,y:event.clientY};
     if(me&&me.playing&&event.buttons){var mult=.0005*settings.mouseSensitivity+.001;
-      if(me.actor.scope)mult*=.3;me.yaw=Math.radAdd(me.yaw,event.movementX*mult);
-      me.pitch=Math.clamp(me.pitch+event.movementY*settings.mouseInvert*mult,-1.5,1.5)}
+      if(me.actor.scope)mult*=.3;me.yaw=Math.radAdd(me.yaw,mx*mult);
+      me.pitch=Math.clamp(me.pitch+my*settings.mouseInvert*mult,-1.5,1.5)}
   };
   function enterDragLook(){
-    if(!me)return;preservationDragLook=true;
+    if(!me||preservationDragLook)return;preservationDragLook=true;
     document.getElementById('gameMenu').style.display='none';
     document.getElementById('deathBox').style.display='none';
     document.getElementById('weaponBox').style.display='block';
@@ -30,10 +43,13 @@ shell2019.run(`
     notify('Mouse capture is unavailable here. Hold a mouse button and drag to look. Press Escape for the menu.',6000);
   }
   document.addEventListener('pointerlockerror',enterDragLook);
+  window.preservationEnterDragLook=enterDragLook;
 `);
 const originalLoad = window.onload;
 window.onload = function (event) {
   originalLoad?.call(window, event);
+  shell2019.run(`if(canvas&&canvas.requestPointerLock){var requestMouseCapture=canvas.requestPointerLock.bind(canvas);
+    canvas.requestPointerLock=function(){try{var pending=requestMouseCapture();if(pending&&pending.catch)pending.catch(window.preservationEnterDragLook)}catch(e){window.preservationEnterDragLook()}};}`);
   const footer = document.getElementById('footerlinks');
   if (footer) {
     const link = document.createElement('a'); link.href = '/preservation.html'; link.target = '_blank';

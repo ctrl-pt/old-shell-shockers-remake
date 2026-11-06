@@ -1,0 +1,11 @@
+* text=auto eol=lf
+# Archive and recovered assets are hashed evidence; preserve their exact bytes.
+archive/** -text
+public/** -text
+*.png -text
+*.jpg -text
+*.gif -text
+*.mp3 -text
+*.ogg -text
+*.ttf -text
+*.woff2 -text

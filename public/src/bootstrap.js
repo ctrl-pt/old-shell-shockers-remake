@@ -3,6 +3,7 @@ var version = '0.20.1-era';
 var firebase = null;
 var isFromEU = false;
 var noAdBlock = true;
+var debug = false;
 var ga = function () {};
 var fbq = function () {};
 var OneSignal = [];

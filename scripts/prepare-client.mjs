@@ -25,6 +25,8 @@ const languageScript = html.match(/<script[^>]*>([\s\S]*?var csv[\s\S]*?)<\/scri
 if (!languageScript) throw new Error('Original language table missing');
 let body = html.slice(html.indexOf('<body>'));
 body = body.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+// The nearby archived page retained a hidden, obsolete menu with a duplicate ID.
+body = body.replace('id="helpControls"', 'id="helpControls_old"');
 body = body.replace(/<div id="changelog"[\s\S]*?<\/div>/, `<div id="changelog" class="hideme"><ul><li>NEW WEAPONS: M2DZ bolt-action rifle and SMEGG submachine gun.<li>Weapon balancing, faster bullets, Castle jump fix, and shell edge damage.</ul><p>Recovered May 2019 client. <a href="/preservation.html" target="_blank">Preservation notes</a></p></div>`);
 body = body.replace(/v\s*<\/a>/, 'v 0.20.1-era</a>');
 const closingBody = body.lastIndexOf('</body>');

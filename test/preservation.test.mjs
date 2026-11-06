@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 import { createHash } from 'node:crypto';
 import { createCore, loadWorld } from '../server/core.mjs';
 import { Room, readJoin } from '../shared/room.mjs';
@@ -96,4 +97,16 @@ test('spatula mode and every original projectile survive extended simulation', a
     for (let tick = 0; tick < 100; tick++) room.tick();
     assert.equal(room.munitions.grenadePool.numActive, 0);
   } finally { room.stop(); }
+});
+
+test('browser practice keeps its seeded randomness separate from the renderer', () => {
+  const main = createCore();
+  const context = vm.createContext({ BABYLON: main.BABYLON, window: {}, console });
+  vm.runInContext('Math.seededRandom = function rendererSeed(){return 42}', context);
+  const rendererSeed = vm.runInContext('Math.seededRandom', context);
+  vm.runInContext(fs.readFileSync('public/src/headless.js', 'utf8'), context);
+  const practice = context.createShellCore();
+  assert.equal(vm.runInContext('Math.seededRandom', context), rendererSeed);
+  assert.equal(practice.classes[4].weapon.damage, 23);
+  assert.equal(practice.classes[5].weapon.damage, 170);
 });
