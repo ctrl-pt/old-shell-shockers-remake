@@ -8,9 +8,19 @@
     "start": "node server/index.mjs",
     "dev": "node server/index.mjs",
     "build": "node scripts/prepare-client.mjs && node scripts/build.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "host": "node scripts/host-game.mjs",
+    "host:stop": "node scripts/stop-host.mjs",
+    "deploy:prepare": "npm run build && npm test && node scripts/prepare-vercel.mjs"
   },
-  "dependencies": { "ws": "8.18.3" },
-  "devDependencies": { "prettier": "3.6.2" },
-  "engines": { "node": ">=22" }
+  "dependencies": {
+    "ssh2": "1.17.0",
+    "ws": "8.22.1"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
 }
