@@ -58,7 +58,27 @@ shell2019.run(`
   var archivedRespawn=Player.prototype.respawn;
   Player.prototype.respawn=function(x,y,z){archivedRespawn.call(this,x,y,z);if(this.id===meId)window.preservationControls.activate()};
   var archivedUpdateLogic=updateLogic;
-  updateLogic=function(){archivedUpdateLogic();window.preservationControls.publish()};
+  updateLogic=function(){
+    archivedUpdateLogic();window.preservationControls.publish();
+    // Opt-in QA reads completed render transforms, without forcing a matrix update.
+    if(typeof parsedUrl!=='undefined'&&parsedUrl.query.diagnostics&&gameScene&&!gameScene.preservationDiagnostics){
+      gameScene.preservationDiagnostics=true;
+      gameScene.onAfterRenderObservable.add(function(){
+        function point(v){return {x:v.x,y:v.y,z:v.z}}
+        canvas.dataset.renderState=JSON.stringify({
+          frame:gameScene.getRenderId(),camera:point(camera.globalPosition),
+          players:players.filter(function(p){return p&&p.actor}).map(function(p){
+            var a=p.actor;
+            return {id:p.id,local:p.id===meId,playing:p.playing,position:point(p),
+              root:point(a.mesh.position),body:point(a.bodyMesh.getWorldMatrix().getTranslation()),
+              eye:point(a.eye.getWorldMatrix().getTranslation()),
+              name:a.nameSprite?point(a.nameSprite.position):null,
+              visibleScene:a.mesh.getScene()===gameScene&&a.head.getScene()===gameScene&&a.eye.getScene()===gameScene};
+          })
+        });
+      });
+    }
+  };
 `);
 const archivedPlay = extern.respawn;
 extern.respawn = function () {

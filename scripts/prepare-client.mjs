@@ -14,6 +14,9 @@ if (insertion < 0) throw new Error('Archived export boundary changed');
 const bridge = `globalThis.shell2019={run:function(source){return eval(source)},getState:function(){return {me:me,players:players,map:map,minMaps:minMaps,gameScene:gameScene,inGame:inGame,customizer:customizer,playerAccount:playerAccount}},weapons:{Eggk47:Eggk47,DozenGauge:DozenGauge,CSG1:CSG1,Cluck9mm:Cluck9mm,RPEGG:RPEGG,SMG:SMG,M24:M24}};`;
 await mkdir(path.join(root, 'public/src'), { recursive: true });
 const compatible = (source.slice(0, insertion) + bridge + source.slice(insertion))
+  // Practice owns a second Babylon engine. These visual nodes must not inherit
+  // its default NullEngine scene, whose render ID never advances.
+  .replaceAll('new BABYLON.TransformNode,', 'new BABYLON.TransformNode("",this.scene),')
   .replaceAll('new BABYLON.Engine(this.canvas,!0,null,!1)', 'new BABYLON.Engine(this.canvas,!0,{disableWebGL2Support:true},!1)')
   .replaceAll('new BABYLON.Engine(canvas,!0,null,!1)', 'new BABYLON.Engine(canvas,!0,{disableWebGL2Support:true},!1)')
   .replace('a.src="https://www.google-analytics.com/analytics.js",m.parentNode.insertBefore(a,m),', '');
@@ -23,7 +26,7 @@ await writeFile(path.join(root, 'public/src/shellshock.js'), compatible);
 const html = await readFile(path.join(root, 'archive/index-2019-05-19.html'), 'utf8');
 const languageScript = html.match(/<script[^>]*>([\s\S]*?var csv[\s\S]*?)<\/script>/i);
 if (!languageScript) throw new Error('Original language table missing');
-const revision = createHash('sha256').update((await Promise.all(
+const revision = createHash('sha256').update(compatible).update((await Promise.all(
   ['bootstrap.js', 'input.js', 'restore.js', 'gameplayTips.js'].map(name => readFile(path.join(root, 'public/src', name), 'utf8'))
 )).join('\n')).digest('hex').slice(0, 12);
 let body = html.slice(html.indexOf('<body>'));
