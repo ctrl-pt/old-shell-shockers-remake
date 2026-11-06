@@ -16,10 +16,11 @@ var s2019Build = new URL(document.currentScript?.src || location.href).searchPar
 var parsedUrl = { root: location.origin + location.pathname, hash: location.hash.slice(1) || undefined, query: {} };
 for (const [key, value] of s2019Params) parsedUrl.query[key] = value === '' ? true : !isNaN(value) ? Number(value) : value;
 var uuid = 255;
-var s2019Backend = s2019Params.get('server') || localStorage.getItem('shell2019.server') || '';
+var s2019Backend = window.shellNetwork.backendUrl(s2019Params.get('server') || localStorage.getItem('shell2019.server') || '', location.protocol === 'https:');
 var s2019Practice = s2019Params.has('practice') || (!s2019Backend && !['localhost', '127.0.0.1', '[::1]'].includes(location.hostname));
 localStorage.setItem('lastVersionPlayed', version);
 if (!localStorage.getItem('gameType')) localStorage.setItem('gameType', '0');
+if (['0', '1', '2'].includes(s2019Params.get('mode'))) localStorage.setItem('gameType', s2019Params.get('mode'));
 if (!localStorage.getItem('lastUsername')) localStorage.setItem('lastUsername', 'Player');
 if (s2019Practice) {
   window.WebSocket = class PreservationSocket {

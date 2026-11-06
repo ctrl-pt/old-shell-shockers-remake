@@ -9,6 +9,14 @@ shell2019.run(`
   selectedServer=0;
   playerAccount.hideAds=true;
   if(s2019Practice)inviteFriends=function(){notify('Practice runs in this browser. For shared games, run or connect to the included multiplayer server.',6000)};
+  else inviteFriends=function(){
+    gameCode=window.shellNetwork.gameCode(selectedServer,gameId,gameKey);
+    var url=window.shellNetwork.inviteUrl(location.href,s2019Backend,gameCode,gameType);
+    openAlertDialog('Invite friends','<p>Share this link to join this room. No account needed.</p><p id="preservationInviteUrl" style="overflow-wrap:anywhere"></p>',
+      {label:'Copy link',width:'10em',onclick:copyFriendCode},{label:'Close',onclick:closeAlertDialog});
+    document.getElementById('preservationInviteUrl').textContent=url;
+    document.getElementById('friendCode').value=url;
+  };
   window.preservationControls=window.createShellInput({
     getPlayer:function(){return me},
     getBindings:function(){return inputToControlMap||{}},

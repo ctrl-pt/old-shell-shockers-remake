@@ -16,3 +16,6 @@ research/rea-skill-tree.json
 research/shellshock-readable.js
 research/core-slice.txt
 research/agent/shellshock-*.js
+
+.vercel
+.env*

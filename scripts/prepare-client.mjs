@@ -31,7 +31,7 @@ const html = await readFile(path.join(root, 'archive/index-2019-05-19.html'), 'u
 const languageScript = html.match(/<script[^>]*>([\s\S]*?var csv[\s\S]*?)<\/script>/i);
 if (!languageScript) throw new Error('Original language table missing');
 const revision = createHash('sha256').update(compatible).update((await Promise.all(
-  ['bootstrap.js', 'input.js', 'restore.js', 'gameplayTips.js'].map(name => readFile(path.join(root, 'public/src', name), 'utf8'))
+  ['network.js', 'bootstrap.js', 'input.js', 'restore.js', 'gameplayTips.js'].map(name => readFile(path.join(root, 'public/src', name), 'utf8'))
 )).join('\n')).digest('hex').slice(0, 12);
 let body = html.slice(html.indexOf('<body>'));
 body = body.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
@@ -41,7 +41,7 @@ body = body.replace(/<div id="changelog"[\s\S]*?<\/div>/, `<div id="changelog" c
 body = body.replace(/v\s*<\/a>/, 'v 0.20.1-era</a>');
 const closingBody = body.lastIndexOf('</body>');
 body = body.slice(0, closingBody) + `<script src="src/restore.js?v=${revision}"></script>` + body.slice(closingBody);
-const head = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Shell Shockers — May 2019</title><meta name="description" content="Playable preservation of the classic May 2019 Shell Shockers client."><link rel="icon" href="img/favicon.png"><link rel="stylesheet" href="includes/fonts.css"><link rel="stylesheet" href="includes/stylesheet.css"><link rel="stylesheet" href="includes/game.css"><link rel="stylesheet" href="includes/restore.css"><script>${languageScript[1]}</script><script src="src/bootstrap.js"></script><script src="src/input.js"></script><script src="src/servers.js"></script><script src="src/gameplayTips.js"></script><script src="src/shellshock.js"></script></head>`;
+const head = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Shell Shockers — May 2019</title><meta name="description" content="Playable preservation of the classic May 2019 Shell Shockers client."><link rel="icon" href="img/favicon.png"><link rel="stylesheet" href="includes/fonts.css"><link rel="stylesheet" href="includes/stylesheet.css"><link rel="stylesheet" href="includes/game.css"><link rel="stylesheet" href="includes/restore.css"><script>${languageScript[1]}</script><script src="src/network.js"></script><script src="src/bootstrap.js"></script><script src="src/input.js"></script><script src="src/servers.js"></script><script src="src/gameplayTips.js"></script><script src="src/shellshock.js"></script></head>`;
 const versionedHead = head.replace(/src="(src\/[^"?]+\.js)"/g, `src="$1?v=${revision}"`);
 await writeFile(path.join(root, 'public/index.html'), versionedHead + body);
 console.log('Prepared the original client and May UI.');
