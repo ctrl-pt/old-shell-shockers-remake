@@ -8,3 +8,4 @@ body { overflow: hidden !important; }
 .pane_faq { display: none; }
 #consent, #privacyOptions, #showItemTemplate { display: none; }
 #versionlink a { cursor: pointer; }
+#canvas:focus { outline: none; }

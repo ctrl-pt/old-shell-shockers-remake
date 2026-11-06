@@ -9,47 +9,66 @@ shell2019.run(`
   selectedServer=0;
   playerAccount.hideAds=true;
   if(s2019Practice)inviteFriends=function(){notify('Practice runs in this browser. For shared games, run or connect to the included multiplayer server.',6000)};
-  var preservationDragLook=false;
-  inputDown=eval('('+inputDown.toString().replace(/document.pointerLockElement/g,'(document.pointerLockElement||preservationDragLook)')+')');
-  inputUp=eval('('+inputUp.toString().replace(/document.pointerLockElement/g,'(document.pointerLockElement||preservationDragLook)')+')');
-  var originalKeyDown=onKeyDown;
-  onKeyDown=function(event){
-    if(event.key==='Escape'&&preservationDragLook){
-      preservationDragLook=false;me.controlKeys=0;me.releaseTrigger();showGameMenu();return;
-    }
-    originalKeyDown(event);
-  };
-  var originalMouseMove=onCanvasMouseMove;
-  var lastDragPoint={x:0,y:0},originalMouseDown=onCanvasMouseDown;
-  onCanvasMouseDown=function(event){lastDragPoint={x:event.clientX,y:event.clientY};originalMouseDown(event)};
-  onCanvasMouseMove=function(event){
-    if(!preservationDragLook || document.pointerLockElement){originalMouseMove(event);return}
-    var mx=event.clientX-lastDragPoint.x,my=event.clientY-lastDragPoint.y;
-    lastDragPoint={x:event.clientX,y:event.clientY};
-    if(me&&me.playing&&event.buttons){var mult=.0005*settings.mouseSensitivity+.001;
-      if(me.actor.scope)mult*=.3;me.yaw=Math.radAdd(me.yaw,mx*mult);
-      me.pitch=Math.clamp(me.pitch+my*settings.mouseInvert*mult,-1.5,1.5)}
-  };
-  function enterDragLook(){
-    if(!me||preservationDragLook)return;preservationDragLook=true;
-    document.getElementById('gameMenu').style.display='none';
-    document.getElementById('deathBox').style.display='none';
-    document.getElementById('weaponBox').style.display='block';
-    document.getElementById('health').style.display='block';
-    document.getElementById('killTicker').style.display='block';
-    document.getElementById('playerList').style.display='block';
-    document.getElementById('cornerButtons').style.display='none';
-    doFirstPersonCamera();reticle.show();addCanvasListeners();
-    notify('Mouse capture is unavailable here. Hold a mouse button and drag to look. Press Escape for the menu.',6000);
-  }
-  document.addEventListener('pointerlockerror',enterDragLook);
-  window.preservationEnterDragLook=enterDragLook;
+  window.preservationControls=window.createShellInput({
+    getPlayer:function(){return me},
+    getBindings:function(){return inputToControlMap||{}},
+    canControl:function(){return !!(me&&me.playing&&!chatting&&inGame&&
+      document.getElementById('gameMenu').style.display==='none'&&
+      document.getElementById('settingsContainer').style.display!=='block'&&
+      document.getElementById('alert').style.display!=='block')},
+    action:function(control,pressed){
+      if(!me)return;
+      if(CONTROL[control]&&control!=='fire'&&control!=='jump'){
+        if(pressed)me.controlKeys|=CONTROL[control];else me.controlKeys&=~CONTROL[control];
+        me.stateBuffer[me.stateIdx].controlKeys=me.controlKeys;return;
+      }
+      if(control==='jump'&&pressed&&me.playing&&me.jump()){
+        var message=new Comm.output(1);message.packInt8(CommCode.jump);ws.send(message.buffer);
+      }else if(control==='fire'){if(pressed)me.pullTrigger();else me.releaseTrigger()}
+      else if(control==='scope'){
+        if(pressed){if(settings.holdToAim||!me.actor.scope)me.actor.scopeIn();else me.actor.scopeOut()}
+        else if(settings.holdToAim)me.actor.scopeOut();
+      }else if(control==='reload'&&pressed)me.reload();
+      else if(control==='weapon'&&pressed)me.swapWeapon(me.weaponIdx===0?1:0);
+      else if(control==='grenade'){
+        if(pressed&&!grenadePowerUp&&me.canSwapOrReload()&&me.grenadeCount>0){grenadePowerUp=true;grenadeThrowPower=-.15}
+        else if(!pressed&&grenadePowerUp){grenadePowerUp=false;document.getElementById('grenadeThrowContainer').style.visibility='hidden';me.throwGrenade(grenadeThrowPower)}
+      }
+    },
+    clear:function(){if(me){me.controlKeys=0;me.releaseTrigger()}grenadePowerUp=false;lastKey=null},
+    look:function(dx,dy){
+      if(!me)return;var sensitivity=.0005*settings.mouseSensitivity+.001;
+      if(me.actor.scope)sensitivity*=.3;
+      me.yaw=Math.radAdd(me.yaw,dx*sensitivity);
+      me.pitch=Math.clamp(me.pitch+dy*settings.mouseInvert*sensitivity,-1.5,1.5);
+    },
+    showGame:function(){
+      document.getElementById('gameMenu').style.display='none';
+      document.getElementById('deathBox').style.display='none';
+      document.getElementById('weaponBox').style.display='block';
+      document.getElementById('health').style.display='block';
+      document.getElementById('killTicker').style.display='block';
+      document.getElementById('playerList').style.display='block';
+      document.getElementById('cornerButtons').style.display='none';
+      doFirstPersonCamera();reticle.show();addCanvasListeners();
+    },
+    pause:function(){showGameMenu()},
+    onFallback:function(){notify('Move the mouse over the game to look. Press Escape for the menu.',5000)}
+  });
+  var archivedRespawn=Player.prototype.respawn;
+  Player.prototype.respawn=function(x,y,z){archivedRespawn.call(this,x,y,z);if(this.id===meId)window.preservationControls.activate()};
+  var archivedUpdateLogic=updateLogic;
+  updateLogic=function(){archivedUpdateLogic();window.preservationControls.publish()};
 `);
+const archivedPlay = extern.respawn;
+extern.respawn = function () {
+  if (shell2019.getState().me?.playing) { window.preservationControls.activate(); window.preservationControls.requestCapture(); }
+  else archivedPlay();
+};
 const originalLoad = window.onload;
 window.onload = function (event) {
   originalLoad?.call(window, event);
-  shell2019.run(`if(canvas&&canvas.requestPointerLock){var requestMouseCapture=canvas.requestPointerLock.bind(canvas);
-    canvas.requestPointerLock=function(){try{var pending=requestMouseCapture();if(pending&&pending.catch)pending.catch(window.preservationEnterDragLook)}catch(e){window.preservationEnterDragLook()}};}`);
+  shell2019.run(`if(canvas)window.preservationControls.bind(canvas)`);
   const footer = document.getElementById('footerlinks');
   if (footer) {
     const link = document.createElement('a'); link.href = '/preservation.html'; link.target = '_blank';

@@ -15,6 +15,8 @@ The browser executable is preserved unchanged in `archive/`. `scripts/prepare-cl
 
 The Node server extracts the original shared code before browser UI bootstrap, replaces actor construction with `null`, and runs each room in a separate JavaScript context. The browser practice server uses the same extracted routines and reconstructed room code. The original binary protocol connects both versions to the archived client. Neither implementation talks to the live Shell Shockers game servers.
 
+The compatibility input controller focuses the canvas after spawning and handles controls even when an embedded browser denies Pointer Lock. It calls the original player movement, jump and weapon methods. Browser-local practice accepts queued movement packets without the network server's rate filter, so timer throttling does not discard movement. Regression tests measure original player position, jump height and view rotation rather than only checking weapon animations.
+
 Reconstructed server behavior is deliberately visible in `shared/room.mjs`. Its damage hook fills code removed from the shipped browser build. Blast falloff, occlusion, room selection, spawn preference, pickup placement and timers are reasonable preservation choices, not recovered backend source. Bots are optional new functionality, and their names identify them.
 
 ## Known differences and remaining verification

@@ -21,7 +21,8 @@ export class Room {
   constructor(core, world, options = {}) {
     Object.assign(this, { core, world, id: options.id || 1, key: options.key || 1,
       mapIndex: options.mapIndex || 0, mode: options.mode || 0, limit: 20,
-      players: [], sessions: new Map(), tickIndex: 0, lastActive: Date.now(), items: [], botCount: options.bots ?? 5 });
+      players: [], sessions: new Map(), tickIndex: 0, lastActive: Date.now(), items: [], botCount: options.bots ?? 5,
+      localSimulation: options.localSimulation === true });
     this.munitions = core.configure({ ...world, players: this.players, limit: this.limit, hooks: {
       broadcast: (data, except) => this.broadcast(data, except), explosion: projectile => this.explode(projectile),
       spatula: () => this.sendSpatula(),
@@ -133,7 +134,7 @@ export class Room {
       case 6: {
         if (bytes.length !== 18 || !p.playing) return;
         const now = Date.now();
-        if (now - session.lastSync < 45) return;
+        if (!this.localSimulation && now - session.lastSync < 45) return;
         session.lastSync = now;
         const next = input.unPackInt8U(), shots = Math.min(input.unPackInt8U(), 5);
         const states = [];

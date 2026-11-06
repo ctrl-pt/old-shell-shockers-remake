@@ -12,6 +12,7 @@ var aipPlayer = function () {};
 var googletag = { cmd: [] };
 var useAdManager = false;
 var s2019Params = new URLSearchParams(location.search);
+var s2019Build = new URL(document.currentScript?.src || location.href).searchParams.get('v') || 'local';
 var parsedUrl = { root: location.origin + location.pathname, hash: location.hash.slice(1) || undefined, query: {} };
 for (const [key, value] of s2019Params) parsedUrl.query[key] = value === '' ? true : !isNaN(value) ? Number(value) : value;
 var uuid = 255;
@@ -58,8 +59,8 @@ if (s2019Practice) {
   };
   window.getPreservationRoom = async bytes => {
     if (!window.preservationModules) window.preservationModules = Promise.all([
-      import('./room.mjs'), import('./world.mjs'), new Promise((resolve, reject) => {
-        const script = document.createElement('script'); script.src = 'src/headless.js';
+      import('./room.mjs?v=' + s2019Build), import('./world.mjs?v=' + s2019Build), new Promise((resolve, reject) => {
+        const script = document.createElement('script'); script.src = 'src/headless.js?v=' + s2019Build;
         script.onload = resolve; script.onerror = reject; document.head.append(script);
       }),
     ]);
@@ -69,7 +70,7 @@ if (s2019Practice) {
     const mapIndex = request.joinType === 23 ? request.mapIndex : Math.floor(Math.random() * core.minMaps.length);
     const model = await fetch('models/map.babylon').then(r => r.json());
     const world = await buildWorld(core, mapIndex, model);
-    const room = new Room(core, world, { id: 1, key: 1, mapIndex, mode: request.mode, bots: 5 });
+    const room = new Room(core, world, { id: 1, key: 1, mapIndex, mode: request.mode, bots: 5, localSimulation: true });
     const session = room.makeSession(request);
     return { room, session };
   };

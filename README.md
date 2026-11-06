@@ -17,7 +17,7 @@ Open **http://localhost:3000** in a desktop browser. Run `npm run build` after c
 - Choose **Create**, select a map, then **PLAY** to make a private room. Use the original invite link to connect another browser to the same running server.
 - Five clearly labeled bots fill empty rooms. Set `$env:BOTS='0'` before `npm start` for human-only games.
 - Add `?practice` to run a self-contained practice server inside the browser. This also works on the hosted static version.
-- In embedded browsers that cannot capture the mouse, hold a mouse button and drag to look. A normal browser supports the original mouse capture.
+- Click PLAY to focus the game controls. In embedded browsers that cannot capture the mouse, move the pointer over the game to look. Escape opens the menu. A normal browser supports the original mouse capture.
 
 ## Online hosting
 
