@@ -1,6 +1,6 @@
 # Shell Shockers · May 2019 preservation
 
-A runnable restoration of the old Shell Shockers client, built from recovered Wayback files and analyzed with [REA](https://github.com/morluto/rea). Includes the original UI, default weapon models, weapon sounds, Babylon 3.3 renderer, old lighting, ten maps, M2DZ and SMEGG.
+A runnable restoration of the old Shell Shockers client, built from recovered Wayback files and analyzed with [REA](https://github.com/morluto/rea). Includes the original UI, default weapon models, weapon sounds, Babylon 3.3 renderer, old lighting, fourteen maps, M2DZ and SMEGG.
 
 ## Run locally
 
@@ -15,6 +15,7 @@ Open **http://localhost:3000** in a desktop browser. Run `npm run build` after c
 
 - WASD: move; Space: jump; left mouse: fire; Shift: aim; R: reload; E: switch weapon; Q: grenade; Escape: menu.
 - Choose **Create**, select a map, then **PLAY** to make a private room. Use the original invite link to connect another browser to the same running server.
+- **Alpha1, Alpha2, Alpha3 and Early Bedrock** restore four removed 2017–2018 layouts alongside the ten May maps. Their original geometry and rotations are preserved; spawn and spatula markers are reconstructed. See [historical map research](docs/HISTORICAL_MAPS.md).
 - Five clearly labeled bots fill empty rooms. Set `$env:BOTS='0'` before `npm start` for human-only games.
 - Add `?practice` to run a self-contained practice server inside the browser. This also works on the hosted static version.
 - Click PLAY to focus the game controls. In embedded browsers that cannot capture the mouse, move the pointer over the game to look. Escape opens the menu. A normal browser supports the original mouse capture.
@@ -53,6 +54,6 @@ The original client preserves the angular hit calculation but omits server-side 
 - `docs/rea-analysis-summary.json`: actual REA 6.8.0 evidence identity and coverage limits. Full retained evidence is available locally in `research/rea-evidence.json`; it is excluded from publishing.
 - `docs/PRESERVATION.md`: research decisions and reconstruction limits.
 - `scripts/recover-assets.py`: resumable acquisition, validation and provenance recording.
-- `npm test`: checks asset integrity, original tuning, all ten maps, handshake/readiness, spawning, damage/death and invalid input.
+- `npm test`: checks asset integrity, original tuning, all fourteen maps, recovered-map conversion and safe spawning, handshake/readiness, damage/death and invalid input.
 
 The original code and assets retain Blue Wizard Digital's copyright and trademarks. This project does not grant a new license to those materials. REA is MIT-licensed. LegacyShell is credited as an archival asset and protocol research source; its modern gameplay modifications are not imported.

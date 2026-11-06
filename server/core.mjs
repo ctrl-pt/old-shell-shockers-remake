@@ -7,6 +7,7 @@ import { buildWorld } from '../shared/world.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const original = fs.readFileSync(path.join(root, 'archive/client/shellshock.min.js'), 'utf8');
+const historicalMaps = fs.readFileSync(path.join(root, 'public/maps/historical.json'), 'utf8');
 const coreEnd = original.indexOf('var bigAdIdx');
 const sharedSource = original.slice(0, coreEnd).replace(/this\.actor=new \w+Actor\([^()]*\)/g, 'this.actor=null');
 const require = createRequire(import.meta.url);
@@ -25,7 +26,7 @@ export function createCore() {
   });
   const codec = original.slice(3124375, 3126298);
   if (!codec.startsWith('Comm=')) throw new Error('Archived codec boundary changed');
-  const expose = `var ${codec};
+  const expose = `minMaps.push.apply(minMaps,${historicalMaps});var ${codec};
     var players=[],playerLimit=20,map,gameScene,now=Date.now(),teamScore=[0,0,0],
       munitionsManager,mathSeed=0,spatula=null,engineCaps={},shadowGen=null;
     function sendToAll(buffer){hooks.broadcast(buffer)}

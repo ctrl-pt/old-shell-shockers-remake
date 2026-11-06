@@ -1,0 +1,74 @@
+[
+  {
+    "id": "dec2017-alpha1",
+    "research_label": "December map 1 / Alpha1",
+    "original_name": "",
+    "source_array_index": 0,
+    "width": 25,
+    "height": 9,
+    "depth": 25,
+    "cells": 1413,
+    "native_map_file": "maps/dec2017-alpha1.json",
+    "export_sha256": "da77df1b1c508d4b44f655790c13a0abe0a5d03a7dfa271543f5ec0642548f19",
+    "source": {
+      "requested_url": "https://web.archive.org/web/20171203032547id_/http://shellshock.io/src/shellshock.min.js?1512201638",
+      "resolved_url": "https://web.archive.org/web/20171203032547id_/http://shellshock.io/src/shellshock.min.js?1512201638",
+      "bytes": 175471,
+      "sha256": "434dbc8f0da7ddcdb9eabc0c2ac1db0e0c7c981f4ea9f841d1c0b7bddcd904dc"
+    }
+  },
+  {
+    "id": "dec2017-alpha2",
+    "research_label": "December map 2 / Alpha2",
+    "original_name": "",
+    "source_array_index": 1,
+    "width": 25,
+    "height": 9,
+    "depth": 25,
+    "cells": 1395,
+    "native_map_file": "maps/dec2017-alpha2.json",
+    "export_sha256": "8bf8bed794c542e862f12a9ad26b79d14fce2d17d29603f2319ffb58f2fa2737",
+    "source": {
+      "requested_url": "https://web.archive.org/web/20171203032547id_/http://shellshock.io/src/shellshock.min.js?1512201638",
+      "resolved_url": "https://web.archive.org/web/20171203032547id_/http://shellshock.io/src/shellshock.min.js?1512201638",
+      "bytes": 175471,
+      "sha256": "434dbc8f0da7ddcdb9eabc0c2ac1db0e0c7c981f4ea9f841d1c0b7bddcd904dc"
+    }
+  },
+  {
+    "id": "dec2017-alpha3",
+    "research_label": "December map 3 / Alpha3",
+    "original_name": "",
+    "source_array_index": 2,
+    "width": 19,
+    "height": 11,
+    "depth": 19,
+    "cells": 1102,
+    "native_map_file": "maps/dec2017-alpha3.json",
+    "export_sha256": "98bca52f72c77bc1fba3f553c6de62a792619614c1afe54dcf6454a9720c5537",
+    "source": {
+      "requested_url": "https://web.archive.org/web/20171203032547id_/http://shellshock.io/src/shellshock.min.js?1512201638",
+      "resolved_url": "https://web.archive.org/web/20171203032547id_/http://shellshock.io/src/shellshock.min.js?1512201638",
+      "bytes": 175471,
+      "sha256": "434dbc8f0da7ddcdb9eabc0c2ac1db0e0c7c981f4ea9f841d1c0b7bddcd904dc"
+    }
+  },
+  {
+    "id": "early-bedrock",
+    "research_label": "Early Bedrock",
+    "original_name": "",
+    "source_array_index": 1,
+    "width": 25,
+    "height": 5,
+    "depth": 16,
+    "cells": 762,
+    "native_map_file": "maps/early-bedrock.json",
+    "export_sha256": "38592b5fa77de1d65e81cc49d3043c0105597bd485f45dd7a678c6c032c28473",
+    "source": {
+      "requested_url": "https://web.archive.org/web/20180218182625id_/https://shellshock.io/src/shellshock.min.js?1518900511",
+      "resolved_url": "https://web.archive.org/web/20180218182625id_/https://shellshock.io/src/shellshock.min.js?1518900511",
+      "bytes": 176084,
+      "sha256": "d5c92ed67f43972925ea3b11a9232b288bb77c02341bdd2f672dd0d540acbe13"
+    }
+  }
+]

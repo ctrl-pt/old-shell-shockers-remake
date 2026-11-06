@@ -1,0 +1,64 @@
+{
+  "tool": "REA 6.8.0",
+  "evidence_id": "ev_20f601c47ddec31149f28969f5caf498b65fc2928d4e92ab6bef38c492077299",
+  "subject": {
+    "name": "dec2017",
+    "digest": {
+      "sha256": "fbc63ba26527533e8e1dcd419d019f2839c01c5d18cc426ffbb3fc418774009b"
+    },
+    "local_path": "C:\\Users\\agraw\\Documents\\ChatGPT\\Old Shell Shockers Remake\\research\\maps-before-may2019\\rea-input\\dec2017",
+    "format": "directory",
+    "architecture": null
+  },
+  "authority": "shipped-artifact",
+  "confidence": "derived",
+  "application_nodes": 18,
+  "application_edges": 20,
+  "semantic_nodes": 14134,
+  "semantic_relations": 11288,
+  "semantic_coverage": {
+    "status": "unknown",
+    "truncated": false,
+    "omitted_nodes": 0,
+    "omitted_relations": 0,
+    "limits": []
+  },
+  "map_bindings": [
+    {
+      "node_id": "jsrg_node_0af41711e10fc2d6520952b7da1248407a69f38b30b52daf24d309380d830c05",
+      "kind": "expression",
+      "source_range": {
+        "start": {
+          "line": 1,
+          "column": 11742
+        },
+        "end": {
+          "line": 1,
+          "column": 11749
+        }
+      }
+    },
+    {
+      "node_id": "jsrg_node_f456a6d89159929a737aec508b2c26458be9864e17e6faac73b57138065487b7",
+      "kind": "binding",
+      "source_range": {
+        "start": {
+          "line": 1,
+          "column": 85388
+        },
+        "end": {
+          "line": 1,
+          "column": 85395
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "CommonJS and ESM binding relationships were recovered from inert syntax and resolved only within the inventoried artifact container.",
+    "Graph coverage is incomplete; unavailable facts remain explicit and must not be read as absence.",
+    "JavaScript and HTML were parsed as inert text; bundle bootstrap code was never executed.",
+    "Static imports, entrypoints, workers, endpoints, and storage relationships do not prove runtime execution.",
+    "Static paths and relationships may remain unresolved when expressions are dynamic or obfuscated.",
+    "Webpack/Rspack factories were recovered from AST literals; REA did not invoke push handlers or bundle bootstrap code."
+  ]
+}

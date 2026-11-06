@@ -23,9 +23,9 @@ test('final archived tuning includes both new weapons and the late overrides', (
   assert.equal(m24.longReloadTime, 120); assert.equal(smg.longReloadTime, 225);
 });
 
-test('all ten embedded maps load original colliders and spawn points', async () => {
+test('all fourteen maps load original colliders and spawn points', async () => {
   const core = createCore();
-  assert.equal(core.minMaps.length, 10);
+  assert.equal(core.minMaps.length, 14);
   for (let i = 0; i < core.minMaps.length; i++) {
     const world = await loadWorld(core, i);
     assert.ok(world.spawnPoints[0].length > 10, core.minMaps[i].name);

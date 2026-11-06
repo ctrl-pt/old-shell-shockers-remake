@@ -1,0 +1,6 @@
+{
+  "requested_url": "https://web.archive.org/cdx/search/cdx?url=shellshock.io/src/*&from=2017&to=2018&output=json&filter=statuscode:200&collapse=digest",
+  "resolved_url": "https://web.archive.org/cdx/search/cdx?url=shellshock.io/src/*&from=2017&to=2018&output=json&filter=statuscode:200&collapse=digest",
+  "bytes": 21439,
+  "sha256": "5c033f3dcb15954a1c2bb6cd3390efd4681f294697ba2271d34f42f72218fbca"
+}

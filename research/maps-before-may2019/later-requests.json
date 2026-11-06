@@ -1,0 +1,6 @@
+{
+  "clients/shellshock-20180914183858.js": "https://web.archive.org/web/20180914183858id_/https://shellshock.io/src/shellshock.min.js?1536950178",
+  "clients/shellshock-20181127144906.js": "https://web.archive.org/web/20181127144906id_/https://shellshock.io/src/shellshock.min.js?1543268805",
+  "clients/shellshock-20181228172830.js": "https://web.archive.org/web/20181228172830id_/https://shellshock.io/src/shellshock.min.js?1545964000",
+  "cdx-2019-before-may-src.json": "https://web.archive.org/cdx/search/cdx?url=shellshock.io/src/shellshock.min.js*&from=20190101&to=20190430&output=json&filter=statuscode:200&collapse=digest"
+}

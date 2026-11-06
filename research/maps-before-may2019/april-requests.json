@@ -1,0 +1,3 @@
+{
+  "cdx-april2019-src.json": "https://web.archive.org/cdx/search/cdx?url=shellshock.io/src/shellshock.min.js*&from=20190401&to=20190430&output=json&fl=timestamp,original,length,digest&filter=statuscode:200&collapse=digest"
+}

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = await readFile(path.join(root, 'archive/client/shellshock.min.js'), 'utf8');
+const historicalMaps = await readFile(path.join(root, 'public/maps/historical.json'), 'utf8');
 const first = source.indexOf('var Items='), end = source.indexOf('var bigAdIdx');
 const shared = source.slice(first, end).replace(/this\.actor=new \w+Actor\([^()]*\)/g, 'this.actor=null');
 const codec = source.slice(3124375, 3126298);
@@ -15,7 +16,7 @@ return {BABYLON:BABYLON,Player:Player,Bullet:Bullet,Rocket:Rocket,Grenade:Grenad
 configure:function(config){players=config.players;playerLimit=config.limit||20;map=config.map;mapMeshes=config.meshes;gameScene=config.scene;hooks=config.hooks;munitionsManager=new MunitionsManager(config.scene);return munitionsManager},
 setNow:function(time){now=time},setSpatula:function(s){spatula=s}};
 `;
-await writeFile(path.join(root, 'public/src/headless.js'), `/* Extracted unchanged physics and weapon tuning; actor construction disabled for server simulation. */\nglobalThis.createShellCore=function(){var BABYLON=globalThis.BABYLON,Math=Object.create(globalThis.Math);${shared}${exports}};`);
+await writeFile(path.join(root, 'public/src/headless.js'), `/* Extracted unchanged physics and weapon tuning; recovered historical maps appended. */\nglobalThis.createShellCore=function(){var BABYLON=globalThis.BABYLON,Math=Object.create(globalThis.Math);${shared}minMaps.push.apply(minMaps,${historicalMaps});${exports}};`);
 await cp(path.join(root, 'shared/room.mjs'), path.join(root, 'public/src/room.mjs'));
 await cp(path.join(root, 'shared/world.mjs'), path.join(root, 'public/src/world.mjs'));
 await mkdir(path.join(root, 'dist'), { recursive: true });

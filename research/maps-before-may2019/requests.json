@@ -1,0 +1,6 @@
+{
+  "cdx-2017-2018-src.json": "https://web.archive.org/cdx/search/cdx?url=shellshock.io/src/*&from=2017&to=2018&output=json&filter=statuscode:200&collapse=digest",
+  "cdx-2017-root.json": "https://web.archive.org/cdx/search/cdx?url=shellshock.io/&from=2017&to=2017&output=json&filter=statuscode:200&collapse=digest",
+  "maphistory.md": "https://raw.githubusercontent.com/onlypuppy7/LegacyShell/a7cbb8dff2685dd024573dd36242d26640ebbcef/wiki/wiki/History/maphistory.md",
+  "legacy-generator.js": "https://raw.githubusercontent.com/onlypuppy7/LegacyShell/a7cbb8dff2685dd024573dd36242d26640ebbcef/src/scripts/barely-working-map-generator.js"
+}

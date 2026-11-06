@@ -2,8 +2,12 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadHistoricalMaps } from './historical-maps.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const historicalMaps = await loadHistoricalMaps(root);
+await mkdir(path.join(root, 'public/maps'), { recursive: true });
+await writeFile(path.join(root, 'public/maps/historical.json'), JSON.stringify(historicalMaps));
 const source = await readFile(path.join(root, 'archive/client/shellshock.min.js'), 'utf8');
 const expected = '4721a0eb11762ff8d7bd949cfd6f18c79ae596499f65f07c1ba4ea286dadad11';
 if (createHash('sha256').update(source).digest('hex') !== expected) throw new Error('Archived client digest mismatch');
@@ -13,7 +17,7 @@ const insertion = source.indexOf('return SoundPool.v1=');
 if (insertion < 0) throw new Error('Archived export boundary changed');
 const bridge = `globalThis.shell2019={run:function(source){return eval(source)},getState:function(){return {me:me,players:players,map:map,minMaps:minMaps,gameScene:gameScene,inGame:inGame,customizer:customizer,playerAccount:playerAccount}},weapons:{Eggk47:Eggk47,DozenGauge:DozenGauge,CSG1:CSG1,Cluck9mm:Cluck9mm,RPEGG:RPEGG,SMG:SMG,M24:M24}};`;
 await mkdir(path.join(root, 'public/src'), { recursive: true });
-const compatible = (source.slice(0, insertion) + bridge + source.slice(insertion))
+const compatible = (source.slice(0, insertion) + `minMaps.push.apply(minMaps,${JSON.stringify(historicalMaps)});` + bridge + source.slice(insertion))
   // Practice owns a second Babylon engine. These visual nodes must not inherit
   // its default NullEngine scene, whose render ID never advances.
   .replaceAll('new BABYLON.TransformNode,', 'new BABYLON.TransformNode("",this.scene),')

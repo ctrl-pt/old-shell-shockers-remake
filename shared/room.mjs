@@ -197,7 +197,7 @@ export class Room {
   }
   spawn(p) {
     const points = this.world.spawnPoints[p.team].length ? this.world.spawnPoints[p.team] : this.world.spawnPoints[0];
-    // Prefer a spawn away from active enemies. Coordinates themselves are original map markers.
+    // Prefer a spawn away from active enemies. Pre-marker maps use reconstructed markers.
     let best = points[0], bestScore = -1;
     for (const point of points.slice().sort(() => Math.random() - .5)) {
       let score = Infinity;
