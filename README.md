@@ -16,17 +16,33 @@ Open **http://localhost:3000** in a desktop browser. Run `npm run build` after c
 - WASD: move; Space: jump; left mouse: fire; Shift: aim; R: reload; E: switch weapon; Q: grenade; Escape: menu.
 - Choose **Create**, select a map, then **PLAY** to make a private room. Use the original invite link to connect another browser to the same running server.
 - **Alpha1, Alpha2, Alpha3 and Early Bedrock** restore four removed 2017–2018 layouts alongside the ten May maps. Their original geometry and rotations are preserved; spawn and spatula markers are reconstructed. See [historical map research](docs/HISTORICAL_MAPS.md).
-- Five clearly labeled bots fill empty rooms. Set `$env:BOTS='0'` before `npm start` for human-only games.
+- Browser-local practice includes five labeled bots. Multiplayer hosting has no bots by default; its ten slots are available to people.
 - Add `?practice` to run a self-contained practice server inside the browser. This also works on the hosted static version.
 - Click PLAY to focus the game controls. In embedded browsers that cannot capture the mouse, move the pointer over the game to look. Escape opens the menu. A normal browser supports the original mouse capture.
 
-## Online hosting
+## Play with friends (up to 10 players)
 
-The private hosted Site runs **browser-local practice**, with the original renderer and assets. It does not provide a shared online multiplayer backend.
+Public website: **https://old-shell-shockers-remake.vercel.app**. The [GitHub repository](https://github.com/ctrl-pt/old-shell-shockers-remake) is private. Players do not need a GitHub or Vercel account.
 
-The included Node server supports shared multiplayer and serves the client from the same origin. Deploy it on a host that supports Node and persistent WebSocket connections. A Dockerfile and `render.yaml` are included; a separate hosting account is required. Configure HTTPS at the hosting provider, use its assigned `PORT`, and verify `/health`. In-memory rooms disappear when the process restarts. Run one server process; this version does not coordinate rooms across replicas.
+1. On the host PC, double-click **Host Game.bat**. It starts the local server, opens an encrypted tunnel, and opens the public website with this session's server address.
+2. Share the session link printed in the hosting window. Everyone who uses that link connects to this PC. The ten-player limit includes the host.
+3. For a specific map, choose **Create**, select a map, then use the game's **Invite friends** button. That link carries the exact room and server address.
+4. Keep this PC awake and the hosting window running. Use **Stop Hosting.bat** or Ctrl+C in the hosting window when finished.
 
-To connect the hosted client to your deployed server, open **Preservation notes** in the footer and enter its `wss://…/game` address. The browser stores this choice locally. The server URL can also be supplied with `?server=wss%3A%2F%2Fyour-host%2Fgame`. Use the complete query string when sharing a hosted-client room link.
+Hosting uses the bundled Node SSH client and an account-free localhost.run HTTPS relay. No router port forwarding, Windows service, or login for friends is needed. The relay address changes between sessions, so share the new session link each time. The plain public website remains available for browser-local practice while the PC is offline.
+
+The launcher reads `host.config.json` for the public website address. `npm run host` and `npm run host:stop` are equivalent terminal commands. Session keys, relay logs, downloaded tools and Vercel authentication stay in ignored local directories. See [hosting details](docs/HOSTING.md).
+
+## Publish updates
+
+Code is pushed to the private GitHub repository with separate commits for completed changes. As requested, Vercel does not have access to the private GitHub repository. Publish only built browser files:
+
+```powershell
+npm run deploy:prepare
+npm exec --yes --package vercel@65.12.1 -- vercel deploy --prebuilt --prod --yes
+```
+
+The deployment contains only static browser files. The multiplayer simulation continues to run on the host PC, with a maximum of ten human players and no bots by default. `npm start` still runs a loopback development server; set `HOST` explicitly if LAN access is wanted. The archived browser source and artwork served to browsers are necessarily downloadable; repository privacy protects repository access and the non-browser project files.
 
 ## What is original, and what is reconstructed?
 
