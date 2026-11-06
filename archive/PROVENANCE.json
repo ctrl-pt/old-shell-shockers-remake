@@ -1,0 +1,15 @@
+{
+  "client": {
+    "url": "https://web.archive.org/web/20190519200727id_/https://shellshock.io/src/shellshock.min.js?1557886744",
+    "sha256": "4721a0eb11762ff8d7bd949cfd6f18c79ae596499f65f07c1ba4ea286dadad11",
+    "capture": "2019-05-19T20:07:27Z",
+    "query_mtime": "2019-05-14",
+    "version_certain": false
+  },
+  "interface": {
+    "url": "https://web.archive.org/web/20190519200726id_/https://shellshock.io/",
+    "sha256": "0455dce5c5741d00a7c86a8361bf9f55ab85d5a93cea49777bc35bac603f03cb",
+    "version_label": "0.20.2"
+  },
+  "target": "0.20.1-era with explicitly documented nearby-patch exceptions"
+}

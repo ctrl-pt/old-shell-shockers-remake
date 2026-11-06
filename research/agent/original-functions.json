@@ -1,0 +1,1196 @@
+{
+  "functions": [
+    {
+      "name": "Bullet",
+      "start": 2792251,
+      "end": 2792502
+    },
+    {
+      "name": "Grenade",
+      "start": 2809992,
+      "end": 2810167
+    },
+    {
+      "name": "Gun",
+      "start": 2810167,
+      "end": 2810405
+    },
+    {
+      "name": "Eggk47",
+      "start": 2810405,
+      "end": 2810635
+    },
+    {
+      "name": "DozenGauge",
+      "start": 2810635,
+      "end": 2810899
+    },
+    {
+      "name": "CSG1",
+      "start": 2810899,
+      "end": 2811160
+    },
+    {
+      "name": "Cluck9mm",
+      "start": 2811160,
+      "end": 2811394
+    },
+    {
+      "name": "RPEGG",
+      "start": 2811394,
+      "end": 2811630
+    },
+    {
+      "name": "SMG",
+      "start": 2811630,
+      "end": 2811851
+    },
+    {
+      "name": "M24",
+      "start": 2811851,
+      "end": 2812083
+    },
+    {
+      "name": "MunitionsManager",
+      "start": 3086274,
+      "end": 3086508
+    },
+    {
+      "name": "Player",
+      "start": 3088163,
+      "end": 3090016
+    },
+    {
+      "name": "Pool",
+      "start": 3090016,
+      "end": 3090180
+    },
+    {
+      "name": "loadMaterials",
+      "start": 3107897,
+      "end": 3112399
+    },
+    {
+      "name": "loadMeshes",
+      "start": 3112399,
+      "end": 3113421
+    },
+    {
+      "name": "make3DArray",
+      "start": 3113421,
+      "end": 3113643
+    },
+    {
+      "name": "Rocket",
+      "start": 3113643,
+      "end": 3113850
+    },
+    {
+      "name": "Spatula",
+      "start": 3113850,
+      "end": 3114043
+    },
+    {
+      "name": "isBadWord",
+      "start": 3114043,
+      "end": 3114996
+    },
+    {
+      "name": "fetchHouseAds",
+      "start": 3118976,
+      "end": 3119492
+    },
+    {
+      "name": "hideBigAd",
+      "start": 3119492,
+      "end": 3119609
+    },
+    {
+      "name": "loadBannerAd",
+      "start": 3119719,
+      "end": 3120894
+    },
+    {
+      "name": "loadMultisizeAd",
+      "start": 3120894,
+      "end": 3121318
+    },
+    {
+      "name": "displayBannerAd",
+      "start": 3121318,
+      "end": 3121635
+    },
+    {
+      "name": "hideBannerAd",
+      "start": 3121635,
+      "end": 3121726
+    },
+    {
+      "name": "hideMultisizeBannerAd",
+      "start": 3121726,
+      "end": 3121919
+    },
+    {
+      "name": "hideBannerAdInContainer",
+      "start": 3121919,
+      "end": 3122193
+    },
+    {
+      "name": "showBannerAd",
+      "start": 3122193,
+      "end": 3122268
+    },
+    {
+      "name": "showBannerAdWithPlaceholder",
+      "start": 3122268,
+      "end": 3122471
+    },
+    {
+      "name": "aipDisplayBannerForTag",
+      "start": 3122471,
+      "end": 3122564
+    },
+    {
+      "name": "aipRefreshBannerForTag",
+      "start": 3122564,
+      "end": 3122657
+    },
+    {
+      "name": "playVideoAd",
+      "start": 3122657,
+      "end": 3122933
+    },
+    {
+      "name": "setApplixirPopup",
+      "start": 3122933,
+      "end": 3123365
+    },
+    {
+      "name": "BulletActor",
+      "start": 3123365,
+      "end": 3123545
+    },
+    {
+      "name": "loadResources",
+      "start": 3128549,
+      "end": 3133140
+    },
+    {
+      "name": "catComplete",
+      "start": 3128738,
+      "end": 3128795
+    },
+    {
+      "name": "openGameMenu",
+      "start": 3133140,
+      "end": 3133248
+    },
+    {
+      "name": "showGameMenu",
+      "start": 3133248,
+      "end": 3133997
+    },
+    {
+      "name": "setRespawnTime",
+      "start": 3133997,
+      "end": 3134511
+    },
+    {
+      "name": "onCanvasMouseDown",
+      "start": 3139262,
+      "end": 3139369
+    },
+    {
+      "name": "onCanvasMouseUp",
+      "start": 3139369,
+      "end": 3139432
+    },
+    {
+      "name": "onCanvasMouseMove",
+      "start": 3139432,
+      "end": 3139929
+    },
+    {
+      "name": "onCanvasMouseWheel",
+      "start": 3139929,
+      "end": 3140075
+    },
+    {
+      "name": "createParticleManager",
+      "start": 3140119,
+      "end": 3140769
+    },
+    {
+      "name": "addExplosionSprite",
+      "start": 3140769,
+      "end": 3141147
+    },
+    {
+      "name": "addExplosion",
+      "start": 3141147,
+      "end": 3141764
+    },
+    {
+      "name": "lerp",
+      "start": 3142256,
+      "end": 3142469
+    },
+    {
+      "name": "shellFragBurst",
+      "start": 3142469,
+      "end": 3143225
+    },
+    {
+      "name": "yolkBurst",
+      "start": 3143225,
+      "end": 3143776
+    },
+    {
+      "name": "updateParticles",
+      "start": 3143776,
+      "end": 3144470
+    },
+    {
+      "name": "onLoadingComplete",
+      "start": 3144470,
+      "end": 3153225
+    },
+    {
+      "name": "complete",
+      "start": 3144578,
+      "end": 3144625
+    },
+    {
+      "name": "worker",
+      "start": 3151062,
+      "end": 3151987
+    },
+    {
+      "name": "sumItUp",
+      "start": 3151570,
+      "end": 3151687
+    },
+    {
+      "name": "iterateXYZ",
+      "start": 3151687,
+      "end": 3151955
+    },
+    {
+      "name": "onMapComplete",
+      "start": 3153225,
+      "end": 3168290
+    },
+    {
+      "name": "doMapOverviewCamera",
+      "start": 3168290,
+      "end": 3168510
+    },
+    {
+      "name": "doFirstPersonCamera",
+      "start": 3168510,
+      "end": 3168768
+    },
+    {
+      "name": "startRendering",
+      "start": 3168768,
+      "end": 3170623
+    },
+    {
+      "name": "updateLogic",
+      "start": 3170718,
+      "end": 3171841
+    },
+    {
+      "name": "serverSync",
+      "start": 3171841,
+      "end": 3172335
+    },
+    {
+      "name": "switchTeam",
+      "start": 3172335,
+      "end": 3172466
+    },
+    {
+      "name": "setTeamButton",
+      "start": 3172466,
+      "end": 3172685
+    },
+    {
+      "name": "addPlayer",
+      "start": 3172685,
+      "end": 3172976
+    },
+    {
+      "name": "removePlayer",
+      "start": 3172976,
+      "end": 3173163
+    },
+    {
+      "name": "rebuildPlayerList",
+      "start": 3173185,
+      "end": 3176001
+    },
+    {
+      "name": "bootPlayer",
+      "start": 3176001,
+      "end": 3176293
+    },
+    {
+      "name": "mutePlayer",
+      "start": 3176293,
+      "end": 3176596
+    },
+    {
+      "name": "updateAmmoUi",
+      "start": 3176596,
+      "end": 3177044
+    },
+    {
+      "name": "captureKeys",
+      "start": 3177073,
+      "end": 3177163
+    },
+    {
+      "name": "releaseKeys",
+      "start": 3177163,
+      "end": 3177232
+    },
+    {
+      "name": "inputDown",
+      "start": 3177232,
+      "end": 3178094
+    },
+    {
+      "name": "inputUp",
+      "start": 3178094,
+      "end": 3178638
+    },
+    {
+      "name": "addKillText",
+      "start": 3178638,
+      "end": 3179131
+    },
+    {
+      "name": "initChatIn",
+      "start": 3179131,
+      "end": 3179304
+    },
+    {
+      "name": "addChat",
+      "start": 3179304,
+      "end": 3179685
+    },
+    {
+      "name": "onKeyDown",
+      "start": 3179685,
+      "end": 3181171
+    },
+    {
+      "name": "onKeyUp",
+      "start": 3181171,
+      "end": 3181337
+    },
+    {
+      "name": "Scope",
+      "start": 3181337,
+      "end": 3181865
+    },
+    {
+      "name": "HitIndicator",
+      "start": 3181865,
+      "end": 3182570
+    },
+    {
+      "name": "Reticle",
+      "start": 3182570,
+      "end": 3182882
+    },
+    {
+      "name": "inviteFriends",
+      "start": 3182882,
+      "end": 3183299
+    },
+    {
+      "name": "copyFriendCode",
+      "start": 3183299,
+      "end": 3183478
+    },
+    {
+      "name": "isMeshVisible",
+      "start": 3186278,
+      "end": 3186985
+    },
+    {
+      "name": "updateTeamUI",
+      "start": 3186985,
+      "end": 3187306
+    },
+    {
+      "name": "addCanvasListeners",
+      "start": 3187306,
+      "end": 3187625
+    },
+    {
+      "name": "removeCanvasListeners",
+      "start": 3187625,
+      "end": 3187956
+    },
+    {
+      "name": "Customizer",
+      "start": 3189004,
+      "end": 3189526
+    },
+    {
+      "name": "GrenadeActor",
+      "start": 3210715,
+      "end": 3210899
+    },
+    {
+      "name": "GunActor",
+      "start": 3210899,
+      "end": 3211155
+    },
+    {
+      "name": "Eggk47Actor",
+      "start": 3211155,
+      "end": 3211648
+    },
+    {
+      "name": "DozenGaugeActor",
+      "start": 3211648,
+      "end": 3212012
+    },
+    {
+      "name": "CSG1Actor",
+      "start": 3212012,
+      "end": 3212566
+    },
+    {
+      "name": "Cluck9mmActor",
+      "start": 3212566,
+      "end": 3213072
+    },
+    {
+      "name": "RPEGGActor",
+      "start": 3213072,
+      "end": 3213358
+    },
+    {
+      "name": "SMGActor",
+      "start": 3213358,
+      "end": 3213846
+    },
+    {
+      "name": "M24Actor",
+      "start": 3213846,
+      "end": 3214197
+    },
+    {
+      "name": "ItemActor",
+      "start": 3214197,
+      "end": 3214258
+    },
+    {
+      "name": "AmmoActor",
+      "start": 3214258,
+      "end": 3214467
+    },
+    {
+      "name": "GrenadeItemActor",
+      "start": 3214467,
+      "end": 3214693
+    },
+    {
+      "name": "ItemManager",
+      "start": 3214693,
+      "end": 3214891
+    },
+    {
+      "name": "ItemRenderer",
+      "start": 3214891,
+      "end": 3215762
+    },
+    {
+      "name": "PlayerReward",
+      "start": 3223053,
+      "end": 3223183
+    },
+    {
+      "name": "closeServerList",
+      "start": 3223814,
+      "end": 3223860
+    },
+    {
+      "name": "pingServers",
+      "start": 3223860,
+      "end": 3224888
+    },
+    {
+      "name": "pinged",
+      "start": 3224815,
+      "end": 3224887
+    },
+    {
+      "name": "selectServer",
+      "start": 3224888,
+      "end": 3225059
+    },
+    {
+      "name": "resize",
+      "start": 3225059,
+      "end": 3225803
+    },
+    {
+      "name": "fetchTwitchStreams",
+      "start": 3225803,
+      "end": 3226926
+    },
+    {
+      "name": "loadSettings",
+      "start": 3226926,
+      "end": 3228724
+    },
+    {
+      "name": "setControl",
+      "start": 3235314,
+      "end": 3235856
+    },
+    {
+      "name": "configKey",
+      "start": 3235856,
+      "end": 3236737
+    },
+    {
+      "name": "afterVideoAdComplete",
+      "start": 3236737,
+      "end": 3237163
+    },
+    {
+      "name": "loggedIn",
+      "start": 3237163,
+      "end": 3239851
+    },
+    {
+      "name": "loginFail",
+      "start": 3239851,
+      "end": 3240412
+    },
+    {
+      "name": "openLoginDialog",
+      "start": 3240412,
+      "end": 3242033
+    },
+    {
+      "name": "onResourcesLoaded",
+      "start": 3242033,
+      "end": 3242503
+    },
+    {
+      "name": "swiftShaderCheck",
+      "start": 3242503,
+      "end": 3243165
+    },
+    {
+      "name": "getRequest",
+      "start": 3243165,
+      "end": 3243474
+    },
+    {
+      "name": "closeFeedback",
+      "start": 3243474,
+      "end": 3243660
+    },
+    {
+      "name": "sendFeedback",
+      "start": 3243660,
+      "end": 3246815
+    },
+    {
+      "name": "openJoinBox",
+      "start": 3246815,
+      "end": 3246955
+    },
+    {
+      "name": "play",
+      "start": 3246955,
+      "end": 3247614
+    },
+    {
+      "name": "joinGame",
+      "start": 3248504,
+      "end": 3254001
+    },
+    {
+      "name": "setDetailSettingsVisibility",
+      "start": 3254001,
+      "end": 3254593
+    },
+    {
+      "name": "enableAutoDetail",
+      "start": 3254593,
+      "end": 3254967
+    },
+    {
+      "name": "disableShadows",
+      "start": 3254967,
+      "end": 3255110
+    },
+    {
+      "name": "enableShadows",
+      "start": 3255110,
+      "end": 3255234
+    },
+    {
+      "name": "lowerResolution",
+      "start": 3255234,
+      "end": 3255328
+    },
+    {
+      "name": "increaseResolution",
+      "start": 3255328,
+      "end": 3255415
+    },
+    {
+      "name": "adaptToNewResolution",
+      "start": 3255415,
+      "end": 3255559
+    },
+    {
+      "name": "getStoredNumber",
+      "start": 3255559,
+      "end": 3255656
+    },
+    {
+      "name": "getStoredBool",
+      "start": 3255656,
+      "end": 3255751
+    },
+    {
+      "name": "getStoredString",
+      "start": 3255751,
+      "end": 3255837
+    },
+    {
+      "name": "openAlertDialog",
+      "start": 3255837,
+      "end": 3257024
+    },
+    {
+      "name": "closeAlertDialog",
+      "start": 3257024,
+      "end": 3257264
+    },
+    {
+      "name": "showDarkOverlay",
+      "start": 3257264,
+      "end": 3257481
+    },
+    {
+      "name": "hideDarkOverlay",
+      "start": 3257481,
+      "end": 3257720
+    },
+    {
+      "name": "reloadPage",
+      "start": 3257720,
+      "end": 3257767
+    },
+    {
+      "name": "showMainMenu",
+      "start": 3257767,
+      "end": 3259400
+    },
+    {
+      "name": "openCustomizerFromMainMenu",
+      "start": 3259400,
+      "end": 3259515
+    },
+    {
+      "name": "onFullscreenChange",
+      "start": 3259515,
+      "end": 3259561
+    },
+    {
+      "name": "openSettingsMenu",
+      "start": 3259561,
+      "end": 3259731
+    },
+    {
+      "name": "closeSettingsMenu",
+      "start": 3259731,
+      "end": 3259784
+    },
+    {
+      "name": "fixStringWidth",
+      "start": 3259784,
+      "end": 3260004
+    },
+    {
+      "name": "notify",
+      "start": 3260004,
+      "end": 3260402
+    },
+    {
+      "name": "dismissNotification",
+      "start": 3260402,
+      "end": 3260659
+    },
+    {
+      "name": "promoteLogin",
+      "start": 3260659,
+      "end": 3261149
+    },
+    {
+      "name": "showCornerButtons",
+      "start": 3261149,
+      "end": 3261241
+    },
+    {
+      "name": "hideGameDom",
+      "start": 3261241,
+      "end": 3261495
+    },
+    {
+      "name": "updatePlayerStatsDisplay",
+      "start": 3261495,
+      "end": 3261808
+    },
+    {
+      "name": "detectChromebook",
+      "start": 3261808,
+      "end": 3261879
+    },
+    {
+      "name": "sendOneSignalTagsForGameplay",
+      "start": 3261879,
+      "end": 3262119
+    },
+    {
+      "name": "sendOneSignalTagsForXsolla",
+      "start": 3262119,
+      "end": 3262320
+    },
+    {
+      "name": "sendOneSignalTags",
+      "start": 3262320,
+      "end": 3262483
+    },
+    {
+      "name": "updateCurrentBalance",
+      "start": 3262483,
+      "end": 3262676
+    },
+    {
+      "name": "menuIn",
+      "start": 3262676,
+      "end": 3262786
+    },
+    {
+      "name": "menuOut",
+      "start": 3262786,
+      "end": 3262866
+    },
+    {
+      "name": "menuFlexIn",
+      "start": 3262866,
+      "end": 3262949
+    },
+    {
+      "name": "randomName",
+      "start": 3263974,
+      "end": 3264310
+    },
+    {
+      "name": "checkBalance",
+      "start": 3264310,
+      "end": 3265413
+    },
+    {
+      "name": "openBuyPassDialog",
+      "start": 3265413,
+      "end": 3265625
+    },
+    {
+      "name": "closeBuyPassDialog",
+      "start": 3265625,
+      "end": 3265741
+    },
+    {
+      "name": "buyChickenNuggetProduct",
+      "start": 3265741,
+      "end": 3266090
+    },
+    {
+      "name": "showBoughtNuggetPopup",
+      "start": 3266090,
+      "end": 3266407
+    },
+    {
+      "name": "getXsollaToken",
+      "start": 3266407,
+      "end": 3268265
+    },
+    {
+      "name": "disableProductPurchasing",
+      "start": 3268265,
+      "end": 3268446
+    },
+    {
+      "name": "waitForSetupAndAuthComplete",
+      "start": 3268466,
+      "end": 3270682
+    },
+    {
+      "name": "openItemInCustomizer",
+      "start": 3270682,
+      "end": 3270933
+    },
+    {
+      "name": "tryShowTaggedItems",
+      "start": 3270933,
+      "end": 3271100
+    },
+    {
+      "name": "tryShowNugget",
+      "start": 3271100,
+      "end": 3271325
+    },
+    {
+      "name": "openTaggedItemsInCustomizer",
+      "start": 3271325,
+      "end": 3271487
+    },
+    {
+      "name": "showSmallAd",
+      "start": 3271487,
+      "end": 3271544
+    },
+    {
+      "name": "physicalUnlockOpenStore",
+      "start": 3271544,
+      "end": 3271673
+    },
+    {
+      "name": "showSpinner",
+      "start": 3271673,
+      "end": 3271882
+    },
+    {
+      "name": "hideSpinner",
+      "start": 3271882,
+      "end": 3271961
+    },
+    {
+      "name": "tryGiveReward",
+      "start": 3271961,
+      "end": 3275667
+    },
+    {
+      "name": "openUrlAndGiveReward",
+      "start": 3275667,
+      "end": 3275817
+    },
+    {
+      "name": "listenForOneSignalNotifications",
+      "start": 3275817,
+      "end": 3276431
+    },
+    {
+      "name": "checkUpgrade",
+      "start": 3276431,
+      "end": 3277540
+    },
+    {
+      "name": "setupUpgradeUI",
+      "start": 3277540,
+      "end": 3278194
+    },
+    {
+      "name": "createShowItemListHTML",
+      "start": 3278194,
+      "end": 3278854
+    },
+    {
+      "name": "renderItemsInShowItemList",
+      "start": 3278854,
+      "end": 3279092
+    },
+    {
+      "name": "callApi",
+      "start": 3279092,
+      "end": 3279935
+    },
+    {
+      "name": "getLocText",
+      "start": 3279935,
+      "end": 3280008
+    },
+    {
+      "name": "PlayerActor",
+      "start": 3286388,
+      "end": 3288377
+    },
+    {
+      "name": "RocketActor",
+      "start": 3288377,
+      "end": 3288571
+    },
+    {
+      "name": "SoundPool",
+      "start": 3304287,
+      "end": 3304501
+    },
+    {
+      "name": "SpatulaActor",
+      "start": 3304501,
+      "end": 3304712
+    }
+  ],
+  "assignments": [
+    {
+      "name": "Collider.playerCollisionMesh",
+      "start": 2799091,
+      "end": 2799181
+    },
+    {
+      "name": "Collider.playerCollisionMesh.position.y",
+      "start": 2799182,
+      "end": 2799224
+    },
+    {
+      "name": "Collider.wedgeCollisionMesh",
+      "start": 2799333,
+      "end": 2799411
+    },
+    {
+      "name": "Collider.wedgeCollisionMesh.position.y",
+      "start": 2799412,
+      "end": 2799455
+    },
+    {
+      "name": "Collider.wedgeCollisionMesh.rotation.x",
+      "start": 2799519,
+      "end": 2799568
+    },
+    {
+      "name": "Collider.iwedgeCollisionMesh",
+      "start": 2799712,
+      "end": 2799791
+    },
+    {
+      "name": "Collider.iwedgeCollisionMesh.position.y",
+      "start": 2799792,
+      "end": 2799835
+    },
+    {
+      "name": "Collider.iwedgeCollisionMesh.rotation.x",
+      "start": 2799900,
+      "end": 2799950
+    },
+    {
+      "name": "Collider.fullCollisionMesh",
+      "start": 2800097,
+      "end": 2800172
+    },
+    {
+      "name": "Collider.pointCollisionMesh",
+      "start": 2800215,
+      "end": 2800298
+    },
+    {
+      "name": "Collider.ray.length",
+      "start": 2804293,
+      "end": 2804314
+    },
+    {
+      "name": "Collider.ray.length",
+      "start": 2805617,
+      "end": 2805638
+    },
+    {
+      "name": "Collider.ray.length",
+      "start": 2808011,
+      "end": 2808032
+    },
+    {
+      "name": "Player.prototype.changeWeaponLoadout",
+      "start": 3090303,
+      "end": 3090740
+    },
+    {
+      "name": "Player.prototype.update",
+      "start": 3090741,
+      "end": 3094596
+    },
+    {
+      "name": "Player.prototype.disableShield",
+      "start": 3094597,
+      "end": 3094738
+    },
+    {
+      "name": "Player.prototype.enableShield",
+      "start": 3094739,
+      "end": 3094881
+    },
+    {
+      "name": "Player.prototype.resetStateBuffer",
+      "start": 3094882,
+      "end": 3095108
+    },
+    {
+      "name": "Player.prototype.moveX",
+      "start": 3095109,
+      "end": 3095717
+    },
+    {
+      "name": "Player.prototype.moveZ",
+      "start": 3095718,
+      "end": 3096326
+    },
+    {
+      "name": "Player.prototype.moveY",
+      "start": 3096327,
+      "end": 3096731
+    },
+    {
+      "name": "Player.prototype.canJump",
+      "start": 3096732,
+      "end": 3096833
+    },
+    {
+      "name": "Player.prototype.jump",
+      "start": 3096834,
+      "end": 3097023
+    },
+    {
+      "name": "Player.prototype.setJumping",
+      "start": 3097024,
+      "end": 3097139
+    },
+    {
+      "name": "Player.prototype.changeCharacter",
+      "start": 3097140,
+      "end": 3098845
+    },
+    {
+      "name": "Player.prototype.swapWeapon",
+      "start": 3098846,
+      "end": 3099473
+    },
+    {
+      "name": "Player.prototype.collectItem",
+      "start": 3099474,
+      "end": 3099895
+    },
+    {
+      "name": "Player.prototype.isAtReady",
+      "start": 3099896,
+      "end": 3100089
+    },
+    {
+      "name": "Player.prototype.canSwapOrReload",
+      "start": 3100090,
+      "end": 3100329
+    },
+    {
+      "name": "Player.prototype.fire",
+      "start": 3100330,
+      "end": 3100963
+    },
+    {
+      "name": "Player.prototype.pullTrigger",
+      "start": 3100964,
+      "end": 3101238
+    },
+    {
+      "name": "Player.prototype.releaseTrigger",
+      "start": 3101239,
+      "end": 3101304
+    },
+    {
+      "name": "Player.prototype.reload",
+      "start": 3101305,
+      "end": 3102108
+    },
+    {
+      "name": "Player.prototype.reloaded",
+      "start": 3102109,
+      "end": 3102276
+    },
+    {
+      "name": "Player.prototype.queueGrenade",
+      "start": 3102277,
+      "end": 3102465
+    },
+    {
+      "name": "Player.prototype.cancelGrenade",
+      "start": 3102466,
+      "end": 3102686
+    },
+    {
+      "name": "Player.prototype.throwGrenade",
+      "start": 3102687,
+      "end": 3103989
+    },
+    {
+      "name": "Player.prototype.removeFromPlay",
+      "start": 3103990,
+      "end": 3104315
+    },
+    {
+      "name": "Player.prototype.scoreKill",
+      "start": 3104316,
+      "end": 3104552
+    },
+    {
+      "name": "Player.prototype.die",
+      "start": 3104553,
+      "end": 3104693
+    },
+    {
+      "name": "Player.prototype.respawn",
+      "start": 3104694,
+      "end": 3105171
+    },
+    {
+      "name": "Player.prototype.resetWeaponState",
+      "start": 3105172,
+      "end": 3105888
+    },
+    {
+      "name": "Player.prototype.isDead",
+      "start": 3105889,
+      "end": 3105942
+    },
+    {
+      "name": "Player.prototype.lookForLadder",
+      "start": 3105943,
+      "end": 3106499
+    },
+    {
+      "name": "Player.prototype.getOccupiedCell",
+      "start": 3106500,
+      "end": 3106745
+    },
+    {
+      "name": "Player.prototype.collidesWithMap",
+      "start": 3106746,
+      "end": 3106834
+    },
+    {
+      "name": "Player.prototype.resetCountdowns",
+      "start": 3106835,
+      "end": 3107081
+    },
+    {
+      "name": "ws.onmessage",
+      "start": 3155597,
+      "end": 3168037
+    },
+    {
+      "name": "ws.onmessage",
+      "start": 3253318,
+      "end": 3254000
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+Player.prototype.jump=function(){return this.climbing?(this.dy=.06,this.climbing=!1,this.setJumping(!0),!0):!!this.canJump()&&(this.dy=.124,this.setJumping(!0),!(this.lastTouchedGround=0))}

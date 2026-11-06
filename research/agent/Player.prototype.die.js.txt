@@ -1,0 +1,1 @@
+Player.prototype.die=function(){this.score=0,this.streak=0,this.deaths++,this.totalDeaths++,this.hp=0,this.playing=!1,this.removeFromPlay()}

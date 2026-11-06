@@ -1,0 +1,1432 @@
+//legacyshell: player
+import BABYLON from "babylonjs";
+import { stateBufferSize, isClient, isServer, CONTROL, devlog, serverlog, iteratePlayers, FramesBetweenSyncs } from '#constants';
+import { ItemTypes, AllItems } from '#items';
+import { getMunitionsManager } from '#bullets';
+import Comm from '#comm';
+//legacyshell: adding kills and deaths (literally tracking ur every move the government is watching yuo)
+import wsrequest from '#wsrequest';
+//legacyshell: logging
+import log from 'puppylog';
+//legacyshell: ss
+import { ss } from '#misc';
+//legacyshell: plugins
+import { plugins } from '#plugins';
+//
+
+//(server-only-start)
+const wsSend = function (output, CommCode) {
+    console.log("wtf?", CommCode); //case that shouldnt exist
+};
+
+let Collider = null;
+let mapMeshes = null;
+let map = null;
+
+let meId = -100;
+//(server-only-end)
+
+// [LS] Player CONSTRUCTOR
+class Player {
+    constructor(data, scene, client) {
+        if (client) {
+            this.client = client;
+            this.room = this.client.room;
+            this.Collider = this.room.Collider;
+            this.mapMeshes = this.room.mapMeshes;
+            this.map = this.room.map;
+            this.minMap = this.room.minMap;
+            this.gameOptions = this.room.gameOptions;
+        } else {
+            this.Collider = Collider;
+            this.mapMeshes = mapMeshes;
+            this.map = map;
+            this.minMap = minMap;
+            this.gameOptions = gameOptions;
+        };
+
+        //actually i hate the below. this is total shit.
+        //listen, im only mirroring what shell actually does.
+
+        this.isGameOwner = false;
+        this.id = data.id;
+        this.uniqueId = data.uniqueId;
+        this.name = data.name || data.nickname; //fyi this is a bad
+        this.classIdx = data.classIdx;
+        this.username = data.username !== "" ? data.username : "Guest";
+        this.adminRoles = data.adminRoles;
+        this.team = data.team;
+        this.primaryWeaponItem = data.primaryWeaponItem;
+        this.secondaryWeaponItem = data.secondaryWeaponItem;
+        this.shellColor = data.shellColor;
+        this.hatItem = data.hatItem;
+        this.stampItem = data.stampItem;
+        this.x = data.x || 0;
+        this.y = data.y || 0;
+        this.z = data.z || 0;
+        this.dx = data.dx || 0;
+        this.dy = data.dy || 0;
+        this.dz = data.dz || 0;
+        this.controlKeys = data.controlKeys;
+        this.yaw = data.yaw;
+        this.pitch = data.pitch;
+        this.score = data.score;
+        this.kills = data.kills;
+        this.deaths = data.deaths;
+        this.streak = data.streak;
+        this.score = data.score;
+        this.totalKills = data.totalKills;
+        this.totalDeaths = data.totalDeaths;
+        this.bestGameStreak = data.bestGameStreak;
+        this.bestOverallStreak = data.bestOverallStreak;
+        this.shield = data.shield;
+        this.hp = data.hp;
+        this.playing = data.playing;
+        this.weaponIdx = data.weaponIdx;
+        this.upgradeProductId = data.upgradeProductId;
+        this.isGameOwner = data.isGameOwner;
+        this.scene = scene;
+        this.corrected = {
+            dx: 0,
+            dy: 0,
+            dz: 0,
+            pitch: 0,
+            yaw: 0
+        };
+        this.corrections = 0;
+        this.hackDetected = data.hackDetected;
+        this.rofCountdown = 0;
+        this.triggerPulled = false;
+        this.shotsQueued = 0;
+        this.reloadsQueued = 0;
+        this.roundsToReload = 0;
+        this.recoilCountdown = 0;
+        this.reloadCountdown = 0;
+        this.swapWeaponCountdown = 0;
+        this.weaponSwapsQueued = 0;
+        this.equipWeaponIdx = this.weaponIdx;
+        this.shotSpread = 0;
+        this.randomSeed = data.randomSeed;
+        this.grenadeCount = this.gameOptions.startingGrenades;
+        this.grenadeCapacity = 3;
+        this.grenadeCountdown = 0;
+        this.grenadesQueued = 0;
+        this.jumping = false;
+        this.lastTouchedGround = 1;
+        this.climbing = false;
+        this.climbingCell = {
+            x: 0,
+            z: 0,
+            ry: 0
+        };
+        this.bobble = 0;
+        this.stateIdx = 0;
+        this.syncStateIdx = 0;
+        this.resetStatesUsed();
+        this.respawnTargetTime = 0;
+        this.pauseTargetTime = 0;
+        this.ready = false;
+        this.chatLineCap = 3;
+        this.respawnQueued = false;
+        if (isClient) this.actor = new PlayerActor(this);
+        this.stateBuffer = [];
+        for (var i = 0; i < stateBufferSize; i++) {
+            this.stateBuffer.push({
+                delta: 0,
+                yaw: data.yaw,
+                pitch: data.pitch,
+                fire: false,
+                jumping: false,
+                climbing: false,
+                x: data.x,
+                y: data.y,
+                z: data.z,
+                dx: data.dx,
+                dy: data.dy,
+                dz: data.dz,
+                controlKeys: data.controlKeys
+            });
+        };
+        this.changeWeaponLoadout(this.primaryWeaponItem, this.secondaryWeaponItem);
+        this.jumps = 0;
+        this.maxJumps = 1;
+        // console.log(this.minMap);
+        if (this.minMap?.extents && this.minMap.extents.maxJumps !== undefined) {
+            let maxJumps = this.minMap.extents.maxJumps;
+            if (maxJumps !== "") this.maxJumps = Number(maxJumps);
+        };
+        this.isFalling = false;
+
+        var respawnTime = 0;
+        if (isServer && this.betweenRounds()) {
+            let maxTime = this.gameOptions.timedGame.spawnDuringInterval ? this.room.roundEndTime + 5e3 : this.room.roundRestartTime;
+            respawnTime = Math.max(0, maxTime - Date.now());
+            // console.log("respawnTime", respawnTime, this.gameOptions.timedGame.spawnDuringInterval);
+        };
+        this.resetDespawn(respawnTime);
+
+        this.jumpHeld = false;
+        this.lastActivity = Date.now();
+
+        this.modifiers = {};
+        this.setDefaultModifiers(true);
+
+        this.predicted = this;
+    };
+    setDefaultModifiers(init) {
+        this.changeModifiers({
+            gravityModifier: this.gameOptions.gravityModifier[this.team],
+            speedModifier: this.gameOptions.speedModifier[this.team],
+            regenModifier: this.gameOptions.regenModifier[this.team],
+            damageModifier: this.gameOptions.damageModifier[this.team],
+            resistanceModifier: this.gameOptions.resistanceModifier[this.team],
+            jumpBoostModifier: this.gameOptions.jumpBoostModifier[this.team],
+            scale: this.gameOptions.scale[this.team],
+            knockbackModifier: this.gameOptions.knockbackModifier[this.team],
+            noclip: this.gameOptions.noclip[this.team],
+            contactDamage: this.gameOptions.contactDamage[this.team],
+            physicsSpeedModifier: this.gameOptions.physicsSpeedModifier[this.team],
+            bulletSpeedModifier: this.gameOptions.bulletSpeedModifier[this.team],
+            reloadSpeedModifier: this.gameOptions.reloadSpeedModifier[this.team],
+            weaponSettleModifier: this.gameOptions.weaponSettleModifier[this.team],
+            grenadeThrowModifier: this.gameOptions.grenadeThrowModifier[this.team],
+            grenadeTimerModifier: this.gameOptions.grenadeTimerModifier[this.team],
+            grenadeBounceModifier: this.gameOptions.grenadeBounceModifier[this.team],
+        }, init);
+    };
+    changeScale (newScale, init) {
+        devlog("setting scale:", newScale);
+        this.modifiers.scale = newScale;
+        if (this.actor) {
+            this.actor.mesh.scaling.set(newScale, newScale, newScale);
+
+            var scale = Math.max(newScale, 0.15); //prevents NaN
+            this.actor.playbackRate = 1.16107 - (0.239878 * Math.log((2.20821 * scale) - 0.251099)); //hm yes, this is a good formula
+            // this.actor.bodyMesh.position.y = 0.32 * newScale;
+        };
+        this.sendModifiers(init);
+    };
+    changeModifiers(modifiers, init) { //a little less disorganized but it works for this purpose
+        const wasNoclip = this.modifiers.noclip;
+        Object.assign(this.modifiers, modifiers);
+
+        if (modifiers.scale !== undefined) this.changeScale(modifiers.scale, init);
+
+        if (wasNoclip && !this.modifiers.noclip && !init) this.unstick();
+
+        this.sendModifiers(init);
+    };
+    sendModifiers(init) {
+        if (isServer && !init) {
+            var output = new Comm.Out();
+            this.client.packModifiers(output);
+            this.client.sendToAll(output, "setModifiers");
+        };
+    };
+    changeWeaponLoadout(primaryWeaponItem, secondaryWeaponItem) {
+        try {
+            if (this.actor && this.weapons) {
+                this.weapons[0].actor.dispose();
+                this.weapons[1].actor.dispose();
+            };
+            devlog("changing weapon loadout:", primaryWeaponItem, secondaryWeaponItem);
+            this.primaryWeaponItem = primaryWeaponItem;
+            this.secondaryWeaponItem = secondaryWeaponItem;
+            this.weapons = [primaryWeaponItem.instantiateNew(this), secondaryWeaponItem.instantiateNew(this)];
+            this.weapon = this.weapons[this.weaponIdx];
+            if (this.actor) {
+                this.weapon.actor.equip();
+            };
+        } catch (error) {
+            console.error("error changing weapon loadout:", error);
+        }
+    };
+    async update(delta, resim) {
+        delta *= this.modifiers.physicsSpeedModifier;
+        await plugins.emit('updateBefore', { player: this, delta, resim });
+
+        var ddx = 0;
+        var ddy = 0;
+        var ddz = 0;
+
+        if (this.y < -3 && isServer && this.hp > 0 && !this.modifiers.noclip) {
+            devlog("[player fell out of the world]");
+            this.hit(10000, this, 0, 0);
+        };
+
+        if ((!resim && this.actor && this.id == meId) || (isServer && !this?.client?.isHuman)) {
+            this.stateBuffer[this.stateIdx].controlKeys = this.controlKeys;
+            this.stateBuffer[this.stateIdx].yaw = this.yaw;
+            this.stateBuffer[this.stateIdx].pitch = this.pitch;
+        };
+        if ((!this.actor && this?.client?.isHuman) || (isClient && (this.id != meId))) {
+            var idx = this.stateIdx;
+            if (this.actor && this.id != meId) {
+                idx = Math.min(idx, FramesBetweenSyncs - 1);
+            };
+            this.controlKeys = this.stateBuffer[idx].controlKeys;
+            this.yaw = this.stateBuffer[idx].yaw;
+            this.pitch = this.stateBuffer[idx].pitch;
+            // devlog(this.name, "set from buffer:", idx, this.controlKeys, this.yaw, this.pitch);
+        };
+        // devlog(this.name, "yawpitch:", this.yaw, this.pitch);
+
+        if (isServer && ((!this.canRespawn()) || this.betweenRounds())) this.controlKeys = 0;
+
+        if (isClient && this.betweenRounds()) this.controlKeys = 0;
+
+        // devlog(this.name, this.stateIdx, this.controlKeys, this.x.toFixed(2), this.y.toFixed(2), this.z.toFixed(2), this.dx.toFixed(2), this.dy.toFixed(2), this.dz.toFixed(2), this.yaw.toFixed(2), this.pitch.toFixed(2));
+
+        // serverlog(this.weapon.ammo.rounds, this.weapon.ammo.store);
+
+        if (this.controlKeys & CONTROL.left) {
+            this.lastActivity = Date.now();
+            ddx -= Math.cos(this.yaw);
+            ddz += Math.sin(this.yaw);
+        };
+
+        if (this.controlKeys & CONTROL.right) {
+            this.lastActivity = Date.now();
+            ddx += Math.cos(this.yaw);
+            ddz -= Math.sin(this.yaw);
+        };
+
+        if (this.controlKeys & CONTROL.up) {
+            this.lastActivity = Date.now();
+            if (this.climbing) {
+                ddy += 1;
+            } else if (this.modifiers.noclip) { //forward is where you look (positive pitch is down)
+                ddx += Math.sin(this.yaw) * Math.cos(this.pitch);
+                ddy -= Math.sin(this.pitch);
+                ddz += Math.cos(this.yaw) * Math.cos(this.pitch);
+            } else {
+                ddx += Math.sin(this.yaw);
+                ddz += Math.cos(this.yaw);
+            };
+        };
+
+        if (this.controlKeys & CONTROL.down) {
+            this.lastActivity = Date.now();
+            if (this.climbing) {
+                ddy -= 1;
+            } else if (this.modifiers.noclip) {
+                ddx -= Math.sin(this.yaw) * Math.cos(this.pitch);
+                ddy += Math.sin(this.pitch);
+                ddz -= Math.cos(this.yaw) * Math.cos(this.pitch);
+            } else {
+                ddx -= Math.sin(this.yaw);
+                ddz -= Math.cos(this.yaw);
+            };
+        };
+
+        if (this.modifiers.noclip) { //jump is up
+            if (this.controlKeys & CONTROL.jump) {
+                this.lastActivity = Date.now();
+                ddy += 1;
+            };
+            this.jumpHeld = false;
+        } else if (this.controlKeys & CONTROL.jump) {
+            this.lastActivity = Date.now();
+            if (!this.jumpHeld) {
+                this.jump();
+                this.jumpHeld = true;
+            };
+        } else this.jumpHeld = false;
+
+        // serverlog({x: this.x, y: this.y, z: this.z}, {dx: this.dx, dy: this.dy, dz: this.dz}, {yaw: this.yaw, pitch: this.pitch});
+
+        // console.log({ddx, ddy, ddz, delta, resim});
+        this.simulateMovement({ ddx, ddy, ddz, delta });
+
+        if (!resim) {
+            if (isServer) { //collecting items
+                let itemManager = this.room.itemManager;
+                let pools = itemManager.pools;
+
+                for (let i = 0; i < pools.length; i++) {
+                    let pool = pools[i];
+
+                    pool.forEachActive((item) => {
+                        if ( //collision
+                            (Math.round(this.x * 2) / 2) == (item.x) &&
+                            Math.round(this.y) == Math.round(item.y) &&
+                            (Math.round(this.z * 2) / 2) == (item.z)
+                        ) {
+                            var itemCollected = this.collectItem(i, this.weaponIdx);
+                            // console.log("could collect?", itemCollected, i, this.weaponIdx);
+                            if (itemCollected) {
+                                this.client.pickupItem(i, this.weaponIdx, item.id);
+                            };
+                        };
+                    })
+                };
+            };
+
+            if (0 < this.shield && this.playing) { //shield countdown
+                this.shield -= delta;
+                if (0 != ddx || 0 != ddy || this.shield <= 0) {
+                    this.disableShield();
+                };
+            };
+            var speed = Math.length3(this.dx, this.dy, this.dz);
+            if (this.actor && this.id == meId) { //wtf is this for
+                speed *= 0.75;
+            };
+            if (this.climbing || this.jumping) {
+                speed *= 2;
+            };
+
+            this.bobble = (this.bobble + (7 * speed * this.modifiers.physicsSpeedModifier)) % Math.PI2;
+            this.settleWeapon(speed, delta);
+            if (this.weapon) {
+                this.weapon.update(delta)
+            };
+            // console.log("patrascru", this.playing, this.isDead(), this.canRespawn(), this.hp);
+            if (0 < this.hp && this.playing) { //health regen
+                this.setHp(Math.min(100, this.hp + .05 * delta * this.modifiers.regenModifier)); //regenning, you can put `* -2` or something here to simulate hunger, or something
+            };
+            if (0 < this.swapWeaponCountdown) {
+                this.shotSpread = this.weapon.subClass.shotSpreadIncrement;
+                this.swapWeaponCountdown -= delta;
+                if (this.swapWeaponCountdown) {
+                    if (this.actor) {
+                        this.id == meId && reticle.show();
+                    } else {
+                        this.swapWeaponCountdown = 0;
+                        this.weaponIdx = this.equipWeaponIdx;
+                        this.weapon = this.weapons[this.weaponIdx];
+                    };
+                };
+            };
+            if (0 < this.reloadCountdown) {
+                this.shotSpread = this.weapon.subClass.shotSpreadIncrement;
+                this.reloadCountdown -= delta;
+                if (this.reloadCountdown <= 0) {
+                    this.reloadCountdown = 0;
+                    this.reloaded();
+                };
+            };
+            if (0 < this.rofCountdown) {
+                this.rofCountdown = Math.max(this.rofCountdown - delta, 0);
+            };
+            if (0 < this.recoilCountdown) {
+                this.recoilCountdown = Math.max(this.recoilCountdown - delta, 0);
+            };
+            if (0 < this.grenadeCountdown) {
+                this.grenadeCountdown -= delta;
+                if (this.grenadeCountdown <= 0 && 0 < this.grenadesQueued && !this.actor) {
+                    this.throwGrenade();
+                };
+            };
+            var oldMethod = false; //new method might be better
+            if (this.actor) { //client
+                if (!this.triggerPulled) this.controlKeys ^= this.controlKeys & CONTROL.fire;
+                this.id == meId && this.triggerPulled && this.fire();
+            } else if (oldMethod ? 0 < this.shotsQueued : this.controlKeys & CONTROL.fire) { //server, old/new method
+                this.lastActivity = Date.now();
+                this.fire();
+                devlog("fire");
+            };
+            this.stateBuffer[this.stateIdx].x = this.x;
+            this.stateBuffer[this.stateIdx].y = this.y;
+            this.stateBuffer[this.stateIdx].z = this.z;
+            this.stateBuffer[this.stateIdx].dx = this.dx;
+            this.stateBuffer[this.stateIdx].dy = this.dy;
+            this.stateBuffer[this.stateIdx].dz = this.dz;
+            this.stateBuffer[this.stateIdx].jumps = this.jumps;
+            this.stateBuffer[this.stateIdx].isFalling = this.isFalling;
+            this.stateBuffer[this.stateIdx].jumpHeld = this.jumpHeld;
+            this.stateIdx = Math.mod(this.stateIdx + 1, stateBufferSize);
+        };
+        this.dx *= Math.pow(.8, delta);
+        this.dz *= Math.pow(.8, delta);
+        if (!this.actor || this.id !== meId) {
+            if (this.reloadsQueued > 0) {
+                this.reload();
+            };
+            if (this.weaponSwapsQueued > 0) {
+                this.swapWeapon(this.equipWeaponIdx);
+            };
+        };
+    };
+    resetPrediction() {
+        this.predicted = this.createSnapshot(true);
+        this.lastRealSnapshot = this.createSnapshot(true);
+    };
+    predictUpdate(delta = 1) {
+        //check if any values in this have changed since last real snapshot
+        if (this.lastRealSnapshot) {
+            const last = this.lastRealSnapshot;
+            const current = this.createSnapshot(true);
+            for (const key in current) {
+                if (key !== "corrected" && current[key] !== last[key]) {
+                    devlog(`prediction reset due to change in ${key}:`, last[key], "->", current[key]);
+                    this.resetPrediction();
+                    break;
+                }
+            };
+        };
+
+        this.predicted = this.simulateMovement({ ...this.predicted, delta }, true);
+    };
+    simulateMovement(...args) {
+        if (plugins.listeners[plugins.type + ':playerMovement']?.length) {
+            var data = { this: this, args, run: (...values) => this.simulateMovementDefault(...values) };
+            plugins.emitSync('playerMovement', data);
+            if (plugins.cancel) return data.result;
+        };
+        return this.simulateMovementDefault(...args);
+    };
+
+    simulateMovementDefault(input, dontAssign) {
+        const out = {
+            x: input.x ?? this.x,
+            y: input.y ?? this.y,
+            z: input.z ?? this.z,
+
+            dx: input.dx ?? this.dx,
+            dy: input.dy ?? this.dy,
+            dz: input.dz ?? this.dz,
+
+            ddx: input.ddx ?? 0,
+            ddy: input.ddy ?? 0,
+            ddz: input.ddz ?? 0,
+
+            delta: input.delta ?? 1,
+
+            corrected: {
+                dx: input.corrected?.dx ?? this.corrected.dx,
+                dy: input.corrected?.dy ?? this.corrected.dy,
+                dz: input.corrected?.dz ?? this.corrected.dz,
+            },
+            corrections: input.corrections ?? this.corrections,
+        };
+
+        if (this.modifiers.noclip) { //walking acceleration on all axes, no gravity, nothing solid
+            this.climbing = false;
+            this.isFalling = false;
+            if (this.jumping) this.setJumping(false);
+            var flyDir = new BABYLON.Vector3(out.ddx, out.ddy, out.ddz).normalize();
+            var pfx = out.dx, pfy = out.dy, pfz = out.dz;
+            out.dx += .007 * flyDir.x * out.delta;
+            out.dy += .007 * flyDir.y * out.delta;
+            out.dz += .007 * flyDir.z * out.delta;
+            var fly = this.modifiers.speedModifier * out.delta;
+            out.x += .5 * (out.dx + pfx) * fly;
+            out.y += .5 * (out.dy + pfy) * fly;
+            out.z += .5 * (out.dz + pfz) * fly;
+            out.dy *= Math.pow(.8, out.delta); //update() does this to dx and dz after the move
+        } else if (this.climbing) { //ladders
+            this.setJumping(false);
+            var pdy = out.dy;
+            if (out.corrections) {
+                pdy += out.corrected.dy / FramesBetweenSyncs;
+                out.corrections--
+            };
+            out.dy += .014 * out.ddy * out.delta;
+            var ndy = .5 * (out.dy + pdy) * out.delta;
+            out.y += ndy;
+            out.dy *= Math.pow(.5, out.delta);
+            var cx = Math.floor(this.climbingCell.x);
+            var cy = Math.floor(out.y + 1e-4);
+            var cz = Math.floor(this.climbingCell.z);
+
+            if (0 == this.climbingCell.ry || this.climbingCell.ry, cy >= this.map.height) {
+                this.climbing = false;
+            } else {
+                var cell = this.getOccupiedCell(cx, cy, cz, out.x, out.y, out.z);
+                if (!(cell.idx && this.mapMeshes[cell.idx].colliderType === "ladder" && cell.ry === this.climbingCell.ry)) {
+                    out.y = Math.round(out.y);
+                    this.climbing = false;
+                };
+            };
+
+            if (this.collidesWithMap(out)) {
+                if (0 < ndy && .3 < out.x % 1) {
+                    out.x -= ndy;
+                    out.dy *= .5;
+                } else {
+                    ndy < 0 && (out.x -= ndy, out.dy *= .5, this.climbing = false)
+                };
+            };
+        } else {
+            var deltaVector = new BABYLON.Vector3(out.ddx, out.ddy, out.ddz).normalize();
+            var pdx = out.dx;
+            var pdz = (pdy = out.dy, out.dz);
+
+            if (out.corrections) {
+                pdx += out.corrected.dx / FramesBetweenSyncs;
+                this.jumping || (pdy += out.corrected.dy / FramesBetweenSyncs);
+                pdz += out.corrected.dz / FramesBetweenSyncs, out.corrections--;
+            };
+
+            if (this.jumping && this.jumps === 0) {
+                if (!this.isFalling) this.jumps++;
+                this.isFalling = true;
+            } else {
+                this.isFalling = false;
+            };
+
+            // console.log(out.dx, out.dy, out.dz, deltaVector, out.delta);
+
+            out.dx += .007 * deltaVector.x * out.delta;
+            out.dz += .007 * deltaVector.z * out.delta;
+            out.dy -= .003 * out.delta * (this.modifiers.gravityModifier || 1);
+            out.dy = Math.clamp(out.dy, -.2, .2);
+
+            var ndx = .5 * (out.dx + pdx) * out.delta;
+            var ndz = (ndy = .5 * (out.dy + pdy) * out.delta, .5 * (out.dz + pdz) * out.delta);
+
+            Object.assign(out, this.moveX(ndx * this.modifiers.speedModifier, out.delta, out));
+            Object.assign(out, this.moveZ(ndz * this.modifiers.speedModifier, out.delta, out));
+            Object.assign(out, this.moveY(ndy, out.delta, out));
+        };
+
+        if (dontAssign) return out;
+        Object.assign(this, out);
+    };
+    unstick() { //noclip was just turned off, move up out of any block
+        if (!this.map) return;
+        for (let i = 0; i < 400 && this.collidesWithMap(); i++) this.y += 0.1;
+    };
+    createSnapshot(...args) {
+        if (plugins.listeners[plugins.type + ':playerSnapshot']?.length) {
+            var data = { this: this, args, run: (...values) => this.createSnapshotDefault(...values) };
+            plugins.emitSync('playerSnapshot', data);
+            if (plugins.cancel) return data.result;
+        };
+        return this.createSnapshotDefault(...args);
+    };
+
+    createSnapshotDefault(returnShallow) { //save all necessary data to be able to restore player state
+        const shallow = {
+            x: this.x,
+            y: this.y,
+            z: this.z,
+            dx: this.dx,
+            dy: this.dy,
+            dz: this.dz,
+            yaw: this.yaw,
+            pitch: this.pitch,
+            corrections: this.corrections,
+            corrected: { ...this.corrected },
+        };
+
+        if (returnShallow) return shallow;
+
+        return {
+            ...shallow,
+            controlKeys: this.controlKeys,
+            stateIdx: this.stateIdx,
+            stateBuffer: this.stateBuffer.map(state => ({ ...state })), //deep copy
+            isFalling: this.isFalling,
+            climbing: this.climbing,
+            shield: this.shield,
+            reloadCountdown: this.reloadCountdown,
+            swapWeaponCountdown: this.swapWeaponCountdown,
+            rofCountdown: this.rofCountdown,
+            recoilCountdown: this.recoilCountdown,
+            shotSpread: this.shotSpread,
+            grenadeCountdown: this.grenadeCountdown,
+            grenadesQueued: this.grenadesQueued,
+            jumps: this.jumps,
+            maxJumps: this.maxJumps,
+            hp: this.hp,
+            playing: this.playing,
+            grenadeCount: this.grenadeCount,
+            grenadeCapacity: this.grenadeCapacity,
+            weaponIdx: this.weaponIdx,
+            equipWeaponIdx: this.equipWeaponIdx,
+            randomSeed: this.randomSeed,
+        };
+    };
+    restoreSnapshot(snapshot = {}) { //restore player state from snapshot
+        for (var key in snapshot) {
+            this[key] = snapshot[key];
+        }
+    };
+    disableShield() { //shield is NOT the powerup, it is the spawning in protection!
+        this.shield = 0;
+        if (this.actor) { // client/server differentiation stuff
+            this.actor.bodyMesh.renderOverlay = false;
+            this.actor.hands.renderOverlay = false;
+        };
+    };
+    enableShield() {
+        this.shield = 120;
+        if (this.actor) { // client/server differentiation stuff
+            this.actor.bodyMesh.renderOverlay = true;
+            this.actor.hands.renderOverlay = true;
+        };
+    };
+    resetStateBuffer() {
+        for (var i = 0; i < stateBufferSize; i++) {
+            this.stateBuffer[i] = {
+                delta: 0,
+                yaw: this.yaw,
+                pitch: this.pitch,
+                fire: false,
+                jump: false,
+                jumping: false,
+                jumps: 0,
+                isFalling: false,
+                jumpHeld: false,
+                climbing: false,
+                x: this.x,
+                y: this.y,
+                z: this.z,
+                dx: 0,
+                dy: 0,
+                dz: 0,
+                controlKeys: 0
+            };
+        };
+    };
+    moveX(ndx, delta, dontApply = {}) {
+        const out = {
+            x: dontApply.x ?? this.x,
+            y: dontApply.y ?? this.y,
+            z: dontApply.z ?? this.z,
+            dx: dontApply.dx ?? this.dx,
+        };
+
+        var old_x = out.x;
+        out.x += ndx;
+        var collide = this.collidesWithMap(out);
+        if (collide) {
+            var old_y = out.y;
+            out.y += Math.abs(ndx) + .01 * delta;
+            if (this.collidesWithMap(out)) {
+                out.x = old_x;
+                out.dx *= .5;
+                out.y = old_y;
+            } else {
+                out.dx *= .92;
+            };
+            this.lookForLadder(collide, out);
+        };
+
+        if (Object.keys(dontApply).length) return out;
+        Object.assign(this, out);
+    };
+    moveZ(ndz, delta, dontApply = {}) { //fuck this function
+        const out = {
+            x: dontApply.x ?? this.x,
+            y: dontApply.y ?? this.y,
+            z: dontApply.z ?? this.z,
+            dz: dontApply.dz ?? this.dz
+        }
+
+        var old_z = out.z;
+        out.z += ndz;
+        var collide = this.collidesWithMap(out);
+        if (collide) {
+            var old_y = out.y;
+            out.y += Math.abs(ndz) + .01 * delta;
+            if (this.collidesWithMap(out)) {
+                out.z = old_z;
+                out.dz *= .5;
+                out.y = old_y;
+            } else {
+                out.dz *= .92;
+            };
+            this.lookForLadder(collide, out); //oh yeah its just sooo simple right so easy
+        }
+
+        if (Object.keys(dontApply).length) return out;
+        Object.assign(this, out);
+    };
+    moveY(...args) {
+        if (plugins.listeners[plugins.type + ':playerMoveY']?.length) {
+            var data = { this: this, args, run: (...values) => this.moveYDefault(...values) };
+            plugins.emitSync('playerMoveY', data);
+            if (plugins.cancel) return data.result;
+        };
+        return this.moveYDefault(...args);
+    };
+
+    moveYDefault(ndy, delta, dontApply = {}) {
+        const out = {
+            x: dontApply.x ?? this.x,
+            y: dontApply.y ?? this.y,
+            z: dontApply.z ?? this.z,
+            dy: dontApply.dy ?? this.dy
+        };
+
+        var old_y = out.y;
+        out.y += ndy;
+        if (this.collidesWithMap(out)) {
+            if (ndy < 0) {
+                if (this.actor && this.id == meId && 0 == this.lastTouchedGround) {
+                    this.lastTouchedGround = Date.now();
+                };
+                this.setJumping(false);
+                this.jumps = 0;
+            };
+            out.y = old_y;
+            out.dy *= .5;
+
+            var cx = Math.floor(out.x);
+            var cz = Math.floor(out.z);
+
+            var cell = this.getOccupiedCell(cx, Math.floor(out.y - 0.5), cz, out.x, out.y, out.z);
+            var cellAbove = this.getOccupiedCell(cx, Math.floor(out.y + 0.5), cz, out.x, out.y, out.z);
+            if (cell) {
+                var mesh = cell.mesh;
+                if (mesh) {
+                    if (Math.length2(cx + 0.5 - out.x, cz + 0.5 - out.z) < 0.3) {
+                        this.onStandOnBlock(mesh, out);
+                    };
+                    //could always add more stuff here... like an elevator or something
+                    //not a trampoline though, that would be too much
+                    //maybe a trampoline
+                    //or a trampoline
+                    //or a trampoline
+                    //ok maybe a trampoline
+                    //or a trampoline
+                    //but not a trampoline
+                    //other than a trampoline, we could add a trampoline
+                    //or a trampoline
+                    //other than a trampoline, it could be a trampoline, but not a trampoline, it could be a trampoline, however it could not be a trampoline
+                    //if you had to add something, it could be a trampoline, but try not to make it a trampoline
+                };
+            };
+            if (cellAbove) {
+                var mesh = cellAbove.mesh;
+                if (mesh) {
+                    if (Math.length2(cx + 0.5 - out.x, cz + 0.5 - out.z) < 0.3) {
+                        this.onStandOnTile(mesh);
+                    };
+                };
+            };
+        } else {
+            if (0 == this.jumping) this.setJumping(true);
+        };
+
+        if (Object.keys(dontApply).length) return out;
+        Object.assign(this, out);
+    };
+    onStandOnBlock(mesh, out = this) {
+        if (mesh.name == "jump-pad" && this.canJump()) {
+            this.jumps++;
+            out.y += 0.26;
+            out.dy = 0.13; //approx 3 blocks in height
+            this.setJumping(true);
+        };
+        plugins.emit("onStandOnBlock", {mesh, this: this, out});
+    };
+    onStandOnTile(mesh) {
+        plugins.emit("onStandOnTile", {mesh, this: this});
+    };
+    canJump() {
+        var canJump = [((!this.jumping) || (this.jumps < this.maxJumps)) | this.climbing]; //so that plugins can mess with it
+        if (!canJump[0]) {
+            this.y -= .2;
+            this.collidesWithMap() && (canJump[0] = true);
+            this.y += .2;
+        };
+        plugins.emit("canJump", { this: this, canJump });
+        return canJump[0];
+    };
+    jump() {
+        if (this.climbing) {
+            this.dy = 0.03;
+            this.climbing = false;
+            this.setJumping(true);
+            return true;
+        };
+
+        if (this.canJump()) {
+            this.jumps++;
+            this.dy = 0.06 * this.modifiers.jumpBoostModifier;
+            this.setJumping(true);
+            return !(this.lastTouchedGround === 0);
+        };
+
+        return false;
+    };
+    setJumping(jumping) {
+        this.jumping = jumping;
+        this.stateBuffer[this.stateIdx].jumping = jumping;
+    };
+    snapshotAmmo() {
+        this.ammoSnapshots = this.ammoSnapshots || {};
+        this.ammoSnapshots[this.classIdx] = JSON.parse(JSON.stringify(this.weapon.ammo));
+    };
+    restoreAmmoSnapshot() {
+        let snapshot = this.ammoSnapshots[this.classIdx];
+        if (snapshot) this.weapon.ammo = snapshot;
+    };
+    changeCharacter(newClassIdx, primaryWeaponItem, secondaryWeaponItem, shellColor, hatItem, stampItem) {
+        this.snapshotAmmo();
+        var itemChanged = function (oldItem, newItem) {
+            return oldItem && !newItem || !oldItem && newItem || null !== oldItem && null !== newItem && oldItem.id !== newItem.id
+        };
+        if (newClassIdx !== this.classIdx || primaryWeaponItem.id !== this.primaryWeaponItem.id || secondaryWeaponItem.id !== this.secondaryWeaponItem.id || shellColor !== this.shellColor || itemChanged(hatItem) || itemChanged(stampItem)) {
+            var output;
+            this.classIdx = newClassIdx;
+            this.primaryWeaponItem = primaryWeaponItem;
+            this.secondaryWeaponItem = secondaryWeaponItem;
+            this.shellColor = shellColor;
+            this.hatItem = hatItem;
+            this.stampItem = stampItem;
+
+            if (this.actor) {
+                this.actor.setShellColor(shellColor);
+                if (this.id == meId) {
+                    var output = new Comm.Out();
+                    output.packInt8U(Comm.Code.changeCharacter);
+                    output.packInt8U(newClassIdx);
+                    output.packInt16U(catalog.get8BitItemId(primaryWeaponItem, newClassIdx));
+                    output.packInt16U(catalog.get8BitItemId(secondaryWeaponItem, newClassIdx));
+                    output.packInt8U(shellColor);
+                    output.packInt16U(catalog.get8BitItemId(hatItem, newClassIdx));
+                    output.packInt16U(catalog.get8BitItemId(stampItem, newClassIdx));
+                    wsSend(output, "changeCharacter");
+                } else {
+                    this.actor.wearHat(this.hatItem);
+                    this.actor.applyStamp(this.stampItem);
+                };
+            } else { //server code woohoo!
+                var output = new Comm.Out();
+                output.packInt8(Comm.Code.changeCharacter);
+                output.packInt8(this.id);
+                output.packInt8(newClassIdx);
+                output.packInt16(this.client.catalog.get8BitItemId(primaryWeaponItem, newClassIdx));
+                output.packInt16(this.client.catalog.get8BitItemId(secondaryWeaponItem, newClassIdx));
+                output.packInt8(shellColor);
+                output.packInt16(this.client.catalog.get8BitItemId(hatItem, newClassIdx));
+                output.packInt16(this.client.catalog.get8BitItemId(stampItem, newClassIdx));
+                this.client.sendToOthers(output, "changeCharacter");
+            };
+
+            this.changeWeaponLoadout(primaryWeaponItem, secondaryWeaponItem)
+        };
+        if (!this.gameOptions.rearmOnRespawn) this.restoreAmmoSnapshot();
+    };
+    swapWeapon(idx) {
+        var output;
+        if (this.actor && this.id != meId || this.canSwapOrReload() && idx < 2) {
+            this.equipWeaponIdx = idx;
+            this.releaseTrigger();
+            this.swapWeaponCountdown = this.weapon.stowWeaponTime + this.weapons[idx].equipTime;
+            if (this.actor) {
+                this.id == meId && reticle.hide();
+                this.weapon.actor.stow();
+                if (this.id == meId) {
+                    (output = new Comm.Out(2)).packInt8(Comm.Code.swapWeapon);
+                    output.packInt8(idx);
+                    wsSend(output, "swapWeapon");
+                };
+            } else {
+                this.swapWeaponCountdown *= .9;
+                this.weaponSwapsQueued--;
+                (output = new Comm.Out(3, true)).packInt8(Comm.Code.swapWeapon);
+                output.packInt8(this.id);
+                output.packInt8(idx);
+                this.client.sendToOthers(output.buffer, this.id);
+            };
+        };
+    };
+    switchTeam(toTeam) {
+        this.team = toTeam;
+        this.score = 0;
+        this.kills = 0;
+        this.streak = 0;
+        this.bestGameStreak = 0;
+
+        this.setDefaultModifiers();
+
+        if (isClient) {
+            iteratePlayers(player => {
+                player.actor?.updateTeam();
+            });
+            rebuildPlayerList();
+        } else {
+            var output = new Comm.Out(3);
+            output.packInt8U(Comm.Code.switchTeam);
+            output.packInt8U(this.id);
+            output.packInt8U(toTeam);
+            this.client.sendToAll(output, "switchTeam");
+        };
+    };
+    collectItem(kind, applyToWeaponIdx) {
+        return AllItems[kind].collect(this, applyToWeaponIdx);
+    };
+    isSteady() {
+        const readySSelected = isServer ? this.weapon.subClass.readySpread * 1.5 : this.weapon.subClass.readySpread;
+        //idk if 1.3 is too much or not enough; Should do the job though. - op7: make that 1.5.
+        return !this.weapon.subClass.readySpread ||
+            5 * readySSelected >= this.shotSpread + this.weapon.subClass.accuracy;
+    };
+    isAtReady(scoped) {
+        return (!this.betweenRounds()) && !(!(this.playing && this.weapon && this.reloadCountdown <= 0 && this.swapWeaponCountdown <= 0 && this.grenadeCountdown <= 0) || this.actor && 0 != grenadePowerUp);
+    };
+    settleWeapon(speed = 0, delta = 1) {
+        delta *= this.modifiers.weaponSettleModifier;
+        var stillSettleFactor = 1 + ((this.weapon.subClass.stillSettleSpeed - 1) / (1 + (speed * 100)));
+        this.shotSpread += Math.floor(150 * speed * delta);
+        var settleFactor = Math.pow(this.weapon.subClass.accuracySettleFactor, delta);
+        this.shotSpread = Math.max(this.shotSpread * settleFactor - 4 * stillSettleFactor * (1 - settleFactor), 0);
+
+        // console.log(this.shotSpread, speed, delta);
+    };
+    canSwapOrReload() {
+        let recoilLeniency = isServer ? 6 : 0; //bigger value means more leniency to people fast reloading.
+
+        let value = (!this.betweenRounds()) && !(!(this.playing && this.weapon && this.recoilCountdown <= recoilLeniency && this.reloadCountdown <= 0 && this.swapWeaponCountdown <= 0 && this.grenadeCountdown <= 0 && this.shotsQueued <= 0) || this.actor && 0 != grenadePowerUp)
+        console.log(value);
+        console.log(!this.betweenRounds());
+        console.log(this.playing, !!this.weapon, this.recoilCountdown, this.recoilCountdown <= 0);
+        console.log(this.reloadCountdown, this.reloadCountdown <= 0, this.swapWeaponCountdown, this.swapWeaponCountdown <= 0);
+        console.log(this.grenadeCountdown, this.grenadeCountdown <= 0, this.shotsQueued,  this.shotsQueued <= 0);
+        return value;
+    };
+    fire() {
+        if (0 < this.shield) {
+            this.releaseTrigger();
+        } else if (this.isAtReady() && this.rofCountdown <= 0) {
+            if (0 < this.weapon.ammo.rounds && this.isSteady()) {
+                if (this.actor) {
+                    this.actor.fire()
+                } else {
+                    this.recoilCountdown *= .9;
+                    this.rofCountdown *= .9;
+                    this.shotsQueued--;
+                };
+
+                this.weapon.fire();
+
+                this.weapon.ammo.rounds--;
+                this.recoilCountdown = this.weapon.subClass.recoil;
+                this.rofCountdown = this.weapon.subClass.rof;
+                this.shotSpread += this.weapon.subClass.shotSpreadIncrement;
+                if (this.actor && this.id == meId) {
+                    this.shotsQueued++;
+                    this.controlKeys |= CONTROL.fire;
+                    this.stateBuffer[this.stateIdx].controlKeys = this.controlKeys;
+                };
+                if (0 == this.weapon.subClass.automatic) {
+                    this.releaseTrigger();
+                };
+                if (this.actor && this.id == meId) {
+                    updateAmmoUi();
+                };
+            } else {
+                this.weapon.actor && (this.weapon.actor.dryFire(), this.releaseTrigger());
+            };
+        };
+    };
+    pullTrigger() {
+        if (1 == grenadePowerUp && me.grenadeCountdown <= 0) {
+            this.cancelGrenade();
+        } else if (this.isAtReady() && this.rofCountdown <= 0) {
+            if (this.weapon.ammo.rounds > 0) {
+                if (this.isSteady()) {
+                    this.triggerPulled = true;
+                    this.fire();
+                } else {
+                    this.weapon.actor.denyFire();
+                };
+            } else {
+                if (0 < this.weapon.ammo.store) {
+                    this.reload();
+                } else {
+                    this.weapon.actor.dryFire();
+                };
+            };
+        };
+    };
+    releaseTrigger() {
+        this.triggerPulled = false;
+    };
+    reload() {
+        if (this.actor && this.id != meId) {
+            this.weapon.actor.reload();
+        } else if (this.weapon.ammo.rounds != this.weapon.ammo.capacity && 0 != this.weapon.ammo.store && this.canSwapOrReload()) {
+            var output;
+            var rounds = Math.min(Math.min(this.weapon.ammo.capacity, this.weapon.ammo.reload) - this.weapon.ammo.rounds, this.weapon.ammo.store);
+            this.roundsToReload = rounds;
+            if (this.actor) {
+                this.weapon.actor.reload();
+                this.releaseTrigger();
+                (output = new Comm.Out(1)).packInt8(Comm.Code.reload);
+                wsSend(output, "reload");
+                // this.weapon.ammo.store -= rounds;
+            } else { //yay server code
+                output = new Comm.Out(2, true);
+                output.packInt8U(Comm.Code.reload);
+                output.packInt8U(this.id);
+                this.client.sendToOthers(output.buffer, this.id, "reload");
+
+                output = new Comm.Out();
+                output.packInt8U(Comm.Code.reload);
+                output.packInt8U(this.id);
+                output.packInt8U(this.weapon.ammo.rounds);
+                output.packInt8U(this.weapon.ammo.store);
+                output.packInt8U(this.roundsToReload);
+                this.client.sendToMe(output, "reload");
+
+                this.reloadsQueued--;
+            };
+            if (this.weapon.ammo.rounds == 0) {
+                this.reloadCountdown = this.weapon.longReloadTime / this.modifiers.reloadSpeedModifier;
+            } else {
+                this.reloadCountdown = this.weapon.shortReloadTime / this.modifiers.reloadSpeedModifier;
+            };
+        };
+    };
+    reloaded() {
+        console.log("reloaded", this.roundsToReload);
+        this.weapon.ammo.rounds += this.roundsToReload;
+        this.weapon.ammo.store -= this.roundsToReload;
+        if (this.actor) {
+            this.id == meId && updateAmmoUi();
+        };
+    };
+    queueGrenade(throwPower) {
+        this.grenadesQueued++;
+        this.grenadeThrowPower = Math.clamp(throwPower, 0, 1) * this.modifiers.grenadeThrowModifier;
+        this.grenadeCountdown = 20;
+        this.actor || (this.grenadeCountdown *= .9);
+    };
+    cancelGrenade() {
+        grenadePowerUp = false;
+        me.grenadeCountdown = 30;
+        this.id == meId && (document.getElementById("grenadeThrowContainer").style.visibility = "hidden");
+        this.actor && (this.actor.gripBone._frozen = false);
+    };
+    throwGrenade() {
+        if (0 < this.shield) this.disableShield();
+        if (this.actor) {
+            var output = new Comm.Out(3);
+            output.packInt8(Comm.Code.throwGrenade);
+            output.packFloat(Math.clamp(grenadeThrowPower, 0, 1));
+            wsSend(output, "throwGrenade");
+            me.grenadeCountdown = 80;
+            this.actor.reachForGrenade();
+        } else if (this.isAtReady() && 0 < this.grenadeCount) { //yay server code
+            this.grenadeCount--;
+            this.grenadesQueued--;
+            this.grenadeCountdown = 72;
+            this.grenadeCountdown = 1;
+
+            var output;
+            var rotMat = BABYLON.Matrix.RotationYawPitchRoll(this.yaw, this.pitch, 0);
+            var vec = BABYLON.Matrix.Translation(0, .1, 1).multiply(rotMat).getTranslation();
+            var posMat = BABYLON.Matrix.Translation(0, -.05, .2);
+            var pos = (posMat = (posMat = posMat.multiply(rotMat)).add(BABYLON.Matrix.Translation(this.x, this.y + Math.max(0.25, 0.3 * this.modifiers.scale), this.z))).getTranslation();
+            var speed = .13 * this.grenadeThrowPower + .08;
+
+            vec.x *= speed;
+            vec.y *= speed;
+            vec.z *= speed;
+            pos.x = Math.floor(300 * pos.x) / 300;
+            pos.y = Math.floor(300 * pos.y) / 300;
+            pos.z = Math.floor(300 * pos.z) / 300;
+            vec.x = Math.floor(300 * vec.x) / 300;
+            vec.y = Math.floor(300 * vec.y) / 300;
+            vec.z = Math.floor(300 * vec.z) / 300;
+
+            var output = new Comm.Out(14);
+            output.packInt8(Comm.Code.throwGrenade);
+            output.packInt8(this.id);
+            output.packFloat(pos.x);
+            output.packFloat(pos.y);
+            output.packFloat(pos.z);
+            output.packFloat(vec.x);
+            output.packFloat(vec.y);
+            output.packFloat(vec.z);
+
+            this.client.sendToAll(output, "throwGrenade");
+            getMunitionsManager(this).throwGrenade(this, pos, vec);
+        };
+    };
+    betweenRounds() {
+        return isClient ? betweenRounds : this.room.betweenRounds();
+    };
+    resetDespawn(respawnTime = 5000, offset = 0) {
+        if (this.betweenRounds() && this.gameOptions.timedGame.spawnDuringInterval) respawnTime = 4e3;
+
+        this.lastDespawn = Date.now() + offset;
+        this.nextRespawn = this.lastDespawn + respawnTime;
+    };
+    canRespawn() {
+        let can = (
+            (this.betweenRounds() && this.gameOptions.timedGame.spawnDuringInterval)  ||
+            (Date.now() >= this.nextRespawn)
+        );
+        return can;
+    };
+    removeFromPlay() {
+        this.playing = false;
+        this.controlKeys = 0;
+        this.shotSpread = 0;
+        this.jumping = false;
+        this.climbing = false;
+        if (this.actor) {
+            this.actor.removeFromPlay();
+            if (this.id == meId) {
+                reticle.hide();
+                scope.hide();
+                camera.fov = getDefaultFov();
+                grenadePowerUp = false;
+                document.getElementById("grenadeThrowContainer").style.visibility = "hidden";
+            };
+        };
+    };
+    scoreKill(killedPlayer, noEggs) {
+        this.kills++;
+        this.totalKills++;
+        this.streak++;
+        this.bestGameStreak = Math.max(this.bestGameStreak, this.streak);
+        this.bestOverallStreak = Math.max(this.bestOverallStreak, this.streak);
+        this.score = this.streak;
+
+        if (isServer && !noEggs) { //do request to add eggs here
+            if (killedPlayer && this.id !== killedPlayer.id) {
+                //a listener sets data.cancel = true to skip the default egg reward (own flag rather than plugins.cancel, which a later emit resets before this async check runs)
+                const data = { this: this, killedPlayer, cancel: false };
+                plugins.emit('scoreKillEggs', data).then(() => {
+                    if (!data.cancel) this.client.addKillViaServices();
+                });
+            };
+        };
+    };
+    knockback(originalDamage, dx, dz) {
+        let kb = originalDamage * 0.01 * this.modifiers.knockbackModifier;
+        let explosion = originalDamage > 100;
+        
+        let kbX = dx * kb
+        let kbZ = dz * kb
+        let kbY = kb * (explosion ? 10 : 0.2);
+
+        this.dx += kbX;
+        this.dy += kbY;
+        this.dz += kbZ;
+
+        devlog("knockback:", originalDamage, kb, dx, dz, kbX, kbZ, kbY, explosion);
+    };
+    hit (damage, firedPlayer, dx, dz, noHeal = false, originalDamage) {
+        if (this.isDead() || (!this.playing)) return;
+        if (this.team === 0 ? false : (this.team === firedPlayer.team && this.id !== firedPlayer.id)) return;
+
+        damage = Math.ceil((damage / this.modifiers.resistanceModifier) / this.modifiers.scale);
+
+        damage = Math.min(damage, this.hp + 1); //no overkill, also no ridiculous healing from nades
+
+        if (firedPlayer && firedPlayer.id !== this.id && !noHeal) {
+            var multiplier = this.gameOptions.lifesteal[firedPlayer.team];
+            console.log("lifesteal multiplier", multiplier, damage, damage * multiplier);
+            firedPlayer.heal(damage * multiplier, this, dx, dz);
+            this.firedPlayer = firedPlayer;
+        };
+
+        var firedPlayerId = firedPlayer ? firedPlayer.id : null;
+
+        if (damage > this.hp) { //no powerups in this version so whatever
+            this.die(firedPlayerId);
+            firedPlayer.scoreKill(this);
+        } else {
+            // console.log("who REALLY fired?", firedPlayer.id, firedPlayer.name)
+            this.setHp(this.hp - damage, firedPlayerId);
+
+            var output = new Comm.Out();
+            output.packInt8U(Comm.Code.hitMe);
+            output.packInt8U(this.hp);
+            output.packFloat(dx);
+            output.packFloat(dz);
+            output.packInt16U(Math.floor(originalDamage / 10)); //kb
+            this.client.sendToMe(output, "hitMe");
+
+            var output = new Comm.Out();
+            output.packInt8U(Comm.Code.hitThem);
+            output.packInt8U(this.id);
+            output.packInt8U(this.hp);
+            output.packFloat(dx);
+            output.packFloat(dz);
+            output.packInt16U(Math.floor(originalDamage / 10)); //kb
+            this.client.sendToOthers(output, "hitThem");
+
+            this.knockback(originalDamage, dx, dz);
+        };
+    };
+    heal (health, damagedPlayer = this, dx = 0, dz = 0) {
+        if (this.isDead() || (!this.playing) || health == 0) return;
+
+        if (health >= 0) {
+            this.setHp(this.hp + health, this.id);
+            if (isServer) {
+                var output = new Comm.Out();
+                output.packInt8U(Comm.Code.heal);
+                output.packInt8U(this.id);
+                output.packInt8U(this.hp);
+                this.client.sendToAll(output, "heal");
+            };
+        } else {
+            this.hit(-health, damagedPlayer, dx, dz, true);
+        };
+    };
+    die (firedId) {
+        this.score = 0;
+        this.streak = 0;
+        this.deaths++;
+        this.totalDeaths++;
+        this.hp = 0;
+        this.playing = false;
+        this.removeFromPlay()
+
+        plugins.emit("onPlayerDeath", {player: this, firedId});
+
+        if (isServer) {
+            var output = new Comm.Out();
+            output.packInt8U(Comm.Code.die);
+            output.packInt8U(this.id);
+            output.packInt8U(firedId);
+            output.packInt8U(5);
+            this.client.sendToAll(output, "die");
+
+            (async () => {
+                if (this.client.session && this.client.session.length > 0) {
+                    var response = await wsrequest({
+                        cmd: "addDeath",
+                        session: this.client.session,
+                    }, ss.config.game.services_server, ss.config.game.auth_key);
+                };
+            })();
+        };
+    };
+    setHp(newHp, firedId) {
+        // console.log("setHp", newHp, firedId, !!this.firedPlayer);
+
+        this.hp = Math.clamp(newHp, 0, 100);
+
+        if (this.hp <= 0 && this.playing) {
+            if (firedId === undefined) {
+                if (this.firedPlayer) {
+                    this.die(this.firedPlayer.id);
+                    this.firedPlayer.scoreKill(this);
+                } else {
+                    this.die(this.id);
+                };
+            } else {
+                this.die(firedId);
+            };
+            this.firedPlayer = null;
+        };
+    };
+    resetStatesUsed() {
+        this.statesUsed = FramesBetweenSyncs * 2;
+        this.statesTillReset = 0;
+        // devlog("reset statesUsed");
+    }
+    incrementStatesUsed(count = 1) {
+        this.statesUsed += count;
+        this.statesTillReset++;
+        if (this.statesTillReset > FramesBetweenSyncs * 50) this.resetStatesUsed();
+    }
+    respawn(newPos) {
+        this.x = newPos.x;
+        this.y = newPos.y;
+        this.z = newPos.z;
+        this.yaw = newPos.yaw || this.yaw;
+        this.pitch = newPos.pitch || this.pitch;
+        this.firedPlayer = null;
+        this.resetStatesUsed();
+
+        //grrrr alr I'll do 4 indent instead of 2. GRRRRRRRRR
+        this.weaponIdx = 0; //switch to primary weapon.
+        //resetWeaponState is called later anyway, so no need to change any other var.
+        //TODO: make this behaviour changeable. See commit message for more (Seq 29. 11. 2k24)
+
+        this.respawnQueued = false;
+        this.playing = true;
+        if (this.hp <= 0) {
+            this.hp = 100;
+            this.resetWeaponState(!this.gameOptions.rearmOnRespawn);
+        } else {
+            //FYI: this is not original behaviour! originally ammo does not come back (so was true)...
+            //switching weapons to another then back would give inifinite ammo, so thats pointless, kek...
+            this.resetWeaponState(!this.gameOptions.rearmOnRespawn); //true
+        };
+        this.resetStateBuffer();
+        if (this.actor) {
+            if (this.id == meId) {
+                viewingPlayerId = meId;
+                startBGM();
+            };
+            this.actor.mesh.position.x = newPos.x;
+            this.actor.mesh.position.y = newPos.y;
+            this.actor.mesh.position.z = newPos.z;
+            this.actor.restoreToPlay();
+            this.weapon.equip();
+            if (this.id == viewingPlayerId) {
+                shake = 0;
+                reticle.show();
+                updateAmmoUi();
+            };
+        };
+        this.enableShield();
+    };
+    resetWeaponState(dontReload) {
+        this.rofCountdown = 0;
+        this.shotsQueued = 0;
+        this.reloadsQueued = 0;
+        this.recoilCountdown = 0;
+        this.reloadCountdown = 0;
+        this.swapWeaponCountdown = 0;
+        this.weaponSwapsQueued = 0;
+        this.shotSpread = 0;
+        this.equipWeaponIdx = this.weaponIdx;
+        this.weapon = this.weapons[this.weaponIdx];
+        this.grenadeCountdown = 0;
+        this.grenadesQueued = 0;
+        this.releaseTrigger();
+        if (this.actor) {
+            this.weapons[0].actor.gunMesh.setEnabled(false);
+            this.weapons[1].actor.gunMesh.setEnabled(false);
+        };
+        if (!dontReload) {
+            for (var i = 0; i < this.weapons.length; i++) {
+                if (this.weapons[i]) {
+                    this.weapons[i].ammo.rounds = this.weapons[i].ammo.capacity;
+                    this.weapons[i].ammo.store = this.weapons[i].ammo.storeMax;
+                };
+            };
+            this.grenadeCount = Math.max(this.grenadeCount, this.gameOptions.startingGrenades);
+        };
+    };
+    isDead() {
+        return this.hp <= 0;
+    };
+    lookForLadder(collide, pos = this) {
+        if (collide && collide.cell && this.controlKeys & CONTROL.up && "ladder" == this.mapMeshes[collide.cell.idx].colliderType) {
+            var diff = Math.abs(Math.radDifference(this.yaw, collide.cell.ry));
+            if (!(.75 < diff && diff < 2.391)) {
+                if (Math.cardVals[1] == collide.cell.ry || Math.cardVals[3] == collide.cell.ry) {
+                    if (.2 < Math.abs(pos.z - collide.z - .5)) return
+                } else if (.2 < Math.abs(pos.x - collide.x - .5)) return;
+                this.climbingCell.x = collide.x;
+                this.climbingCell.z = collide.z;
+                this.climbingCell.ry = collide.cell.ry;
+                this.climbing = true;
+                this.lastTouchedGround = Date.now() + 100;
+                this.setJumping(false);
+            };
+        };
+    };
+    getOccupiedCell(cx = Math.floor(this.x), cy = Math.floor(this.y), cz = Math.floor(this.z), x = this.x, y = this.y, z = this.z) {
+        if (x < 0 || y < 0 || z < 0 || x >= this.map.width || y >= this.map.height || z > this.map.depth) return {};
+
+        if (this.map && this.map.data && this.map.data[cx] && this.map.data[cx][cy] && this.map.data[cx][cy][cz]) {
+            return this.map.data[cx][cy][cz];
+        } else {
+            return {};
+        };
+    };
+    collidesWithMap(pos = this) {
+        return this.Collider.playerCollidesWithMap(this, pos);
+    };
+};
+
+export default Player;

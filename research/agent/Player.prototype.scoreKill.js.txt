@@ -1,0 +1,1 @@
+Player.prototype.scoreKill=function(){this.kills++,this.totalKills++,this.streak++,this.bestGameStreak=Math.max(this.bestGameStreak,this.streak),this.bestOverallStreak=Math.max(this.bestOverallStreak,this.streak),this.score=this.streak}

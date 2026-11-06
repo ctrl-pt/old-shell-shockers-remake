@@ -1,0 +1,933 @@
+//legacyshell: room
+import ClientConstructor from '#client';
+import Comm from '#comm';
+import ColliderConstructor from '#collider';
+import createLoop from '#looper';
+import extendMath from '#math';
+import { setParamsforLoader, loadMapMeshes, buildMapData } from '#loading';
+import { TickStep, stateBufferSize, FramesBetweenSyncs, MAP, devlog, chatCooldown, NextRoundTimeout, iteratePlayers, maxServerSlots, iteratePlayersAsync } from '#constants';
+import { GameTypes } from '#gametypes';
+import { ItemTypes } from '#items';
+import { MunitionsManagerConstructor } from '#munitionsManager';
+import { ItemManagerConstructor } from '#itemManager';
+import { PermissionsConstructor } from '#permissions';
+import BABYLON from "babylonjs";
+import { censor } from "#censor";
+import { removeCanvasResources } from '#stringWidth';
+//legacyshell: basic
+import { ss, misc } from '#misc';
+//legacyshell: logging
+import log from 'puppylog';
+//legacyshell: plugins
+import { plugins } from '#plugins';
+//legacyshell: room worker (bridge)
+import { parentPort } from 'worker_threads';
+//
+
+plugins.emit('roomLoading', {});
+
+export class RoomConstructor {
+    constructor(info) {
+        this.initRoom(info);
+    };
+
+    async initRoom(info) {
+        await plugins.emit('roomInit', {this: this});
+
+        extendMath(Math);
+
+        await plugins.emit('roomSetSS', {ss});
+
+        this.lastTimeStamp = Date.now();
+        console.log("creating room", info.gameId);
+        this.startTime = Date.now();
+        this.existedFor = 0;
+        this.gameOwner = null;
+
+        this.wsId_to_client = {};
+
+        this.serverStateIdx = 0;
+
+        this.joinType = info.joinType; console.log(this.joinType)
+        this.gameType = info.gameType;
+        this.gameOptionsOriginal = JSON.parse(JSON.stringify(GameTypes[this.gameType].options)); //create copy of object
+        this.gameOptions = JSON.parse(JSON.stringify(GameTypes[this.gameType].options)); //create copy of object
+        console.log("gameOptions", this.gameOptions);
+        this.mapId = info.mapId;
+        this.gameId = info.gameId;
+        this.gameKey = info.gameKey;
+        this.locked = info.locked;
+        console.log("locked", this.locked, GameTypes[this.gameType]);
+        await plugins.emit("roomInitGameOptions", {this: this});
+
+        this.players_by_id = [];
+        this.clients_by_id = [];
+        this.items = {};
+
+        //scene init
+        this.preload = ss.preload; //made by the worker while it was spare, map.babylon is already in it
+        ss.preload = null;
+        this.engine = this.preload?.engine ?? new BABYLON.NullEngine();
+        this.scene = this.preload?.scene ?? new BABYLON.Scene(this.engine);
+        this.scene.room = this;
+        this.map = null;
+
+        //collider init (kinda)
+        this.Collider = new ColliderConstructor(this.scene);
+
+        //pools init
+        this.munitionsManager = new MunitionsManagerConstructor(this.scene);
+        this.itemManager = new ItemManagerConstructor();
+
+        //permissions, censor
+        this.perm = new PermissionsConstructor(this);
+        this.censor = censor;
+
+        //map init
+        //await plugins.emit('roomBeforeMapInit', {this: this});
+        //setParamsforLoader(this.minMap, this.Collider); - moved into buildMap
+        this.validItemSpawns = [];
+
+        //timed rounds
+        this.setRoundTimeout();
+
+        this.acceptCustomMaps = false; 
+
+        await plugins.emit('roomBeforeMapBuild', {this: this, info: info}); //modify this.minMap.
+
+        const extraParams = info.extraParams;
+        if (this.acceptCustomMaps && extraParams.customMinMap) {
+            try {
+                if (!extraParams.customMinMap.surfaceArea) throw new Error("invalid map");
+
+                console.log("told room to use custom map. ye.");
+                const customMapP = extraParams.customMinMap;
+                this.setMinMap(customMapP);
+
+                console.log("custom minMap passed initial stage.");
+
+                await this.buildMap(this.minMap);
+
+                this.useCustomMap = true;
+                console.log("custom minMap passed map building.");
+                this.joinType = Comm.Code.createPrivateGame;
+            } catch (e) {
+                console.error("err in custom map parsing, looks like we don't go custom", e);
+
+                this.customMapFailed = true;
+                await this.useDefaultMap();
+            };
+        } else {
+            console.log("no custom map jajaja", this.mapId);
+            await this.useDefaultMap();
+        };
+    };
+
+    async useDefaultMap() {
+        console.log("just use default map lol......");
+        this.useCustomMap = false;
+        this.setMinMap(ss.maps[this.mapId]);
+        await this.buildMap(ss.maps[this.mapId]);
+    };
+
+    setMinMap(minMap) {
+        console.log("set minMap:", minMap?.name);
+        this.minMap = minMap;
+        this.playerLimit = minMap.playerLimit || 18;
+        this.maxAmmo = Math.ceil(minMap.surfaceArea / 25);
+        this.maxGrenades = Math.ceil(minMap.surfaceArea / 65);
+        console.log("maxitems:", this.maxAmmo, this.maxGrenades)
+    };
+
+    async buildMap(minMap = this.minMap) {
+        var data = { this: this, minMap };
+        await plugins.emit('roomBuildMap', data);
+        minMap = data.minMap;
+        return new Promise(async (resolve, reject) => {
+            try {
+                setParamsforLoader(minMap, this.Collider);
+                const preload = this.preload; //only good for the first build, a rebuild loads them again like before
+                this.preload = null;
+                const loadMeshes = preload ? (scene, callback) => preload.done.then(callback) : loadMapMeshes;
+                loadMeshes(this.scene, async () => {
+                    try {
+                        ss.config.verbose && console.log("done loadMapMeshes");
+
+                        const mapData = buildMapData(function (str) {
+                            log.error("The following map meshes were not found:\n\n" + str + "\nTry clearing your cache and reload the page!")
+                        });
+
+                        const { map, spawnPoints, mapMeshes } = mapData;
+            
+                        this.map = map;
+                        this.spawnPoints = spawnPoints; //this is a [] from 0-2; conveniently lining up with ffa, team1, team2 (i think)
+                        this.mapMeshes = mapMeshes;
+            
+                        this.Collider.setParams(this.map, this.mapMeshes, this.playerLimit, this.players_by_id);
+            
+                        this.updateLoopObject = createLoop(this.updateLoop.bind(this), TickStep);
+                        this.dataSyncLoopObject = createLoop(this.dataSyncLoop.bind(this), 1e3);
+                        this.metaLoopObject = createLoop(this.metaLoop.bind(this), 2e3);
+                        this.updateRoomDetailsLoopObject = createLoop(this.updateRoomDetails.bind(this), 30e3);
+            
+                        this.getValidItemSpawns();
+                        this.spawnItemsLoopObject = createLoop(this.spawnItems.bind(this), 30e3); //just in case, i guess?
+            
+                        await plugins.emit('roomInitEnd', {
+                            this: this
+                        });
+        
+                        return resolve();
+                    } catch (error) {
+                        return reject(error);
+                    };
+                });
+            } catch (error) {
+                return reject(error);
+            };
+        });
+    };
+
+    sendWsToClient(type, content, wsId) {
+        const client = this.wsId_to_client[wsId];
+        plugins.emit('roomWsMessage', {this: this, client, type, content});
+        if (client) {
+            switch (type) {
+                case "wsMessage":
+                    client.onmessage(content);
+                    break;
+                case "wsClose":
+                    client.onclose(content);
+                    break;
+                default:
+                    break;
+            }
+        };
+    };
+
+    setRoundTimeout() {
+        if (this.gameOptions.timedGame.enabled) {
+            this.roundLength = this.gameOptions.timedGame.roundLength;
+            this.roundLengthInMs = this.roundLength * 1e3;
+            this.roundEndTime = Date.now() + this.roundLengthInMs;
+            this.timeoutForNextRound = NextRoundTimeout * 1e3;
+            this.roundRestartTime = this.roundEndTime + this.timeoutForNextRound;
+
+            console.log("roundLength", this.roundLength);
+            console.log("roundEndTime", this.roundEndTime);
+            console.log("roundLengthInMs", this.roundLengthInMs);
+            console.log("timeoutForNextRound", this.timeoutForNextRound);
+            console.log("roundRestartTime", this.roundRestartTime);
+
+            var output = new Comm.Out(1);
+            output.packInt8U(Comm.Code.roundStart);
+            this.sendToAll(output, null, "roundStart");
+
+            this.resetGame();
+
+            this.roundTimeout = setTimeout(() => {
+                this.endRound();
+            }, this.roundLengthInMs);
+        } else {
+            this.roundEndTime = 0;
+            this.roundLength = 0;
+            this.roundLengthInMs = 0;
+        };
+    };
+
+    endRound() {
+        clearTimeout(this.roundTimeout);
+
+        this.roundEndTime = Date.now();
+        this.roundRestartTime = this.roundEndTime + this.timeoutForNextRound;
+
+        console.log(`Round ended. Starting new round in ${NextRoundTimeout} seconds.`);
+
+        this.resetGame(true);
+
+        var output = new Comm.Out();
+        this.packRoundEnd(output);
+        this.sendToAll(output, null, "roundEnd");
+
+        if (!this.gameOptions.timedGame.spawnDuringInterval) setTimeout(() => {
+            this.pauseAllClients(this.timeoutForNextRound - 3e3);
+        }, 3e3);
+
+        setTimeout(() => {
+            console.log("New round starting now!");
+            this.setRoundTimeout();
+        }, this.timeoutForNextRound);
+    };
+
+    packRoundEnd(output) {
+        plugins.emit('packRoundEnd', {this: this, output});
+        output.packInt8U(Comm.Code.roundEnd);
+        output.packInt16U(this.roundLength); //length of the round (in seconds)
+        plugins.emit('packRoundEndEnd', {this: this, output});
+    };
+
+    packRoundUpdate(output) {
+        plugins.emit('packRoundUpdate', {this: this, output});
+        output.packInt8U(Comm.Code.roundUpdate);
+        output.packInt16U(this.roundLength); //length of the round (in seconds)
+        output.packInt32U(Math.max(0, this.roundEndTime - Date.now())); //time to end the round (in ms)
+        output.packInt32U(Math.max(0, this.roundRestartTime - Date.now())); //time to wait before next round starts (in ms)
+        plugins.emit('packRoundUpdateEnd', {this: this, output});
+    };
+
+    betweenRounds() {
+        return this.gameOptions.timedGame.enabled && this.roundEndTime < Date.now();
+    };
+
+    resetGame(defRemove) {
+        iteratePlayers(player => {
+            if ((!this.gameOptions.timedGame.spawnDuringInterval) || defRemove) player.removeFromPlay();
+            player.score = 0;
+            player.kills = 0;
+            player.deaths = 0;
+            player.streak = 0;
+            player.bestGameStreak = 0;
+            player.ammoSnapshots = null;
+            player.resetWeaponState();
+            plugins.emit('resetGamePlayer', {this: this, player});
+        });
+    };
+
+    pauseAllClients(time = 5e3) {
+        this.clients_by_id.forEach(client => { client.pause(time); });
+    };
+
+    updateRoomDetails() {
+        this.details = this.getPlayerCount(undefined, true, true);
+        plugins.emit('roomDetailsUpdated', {this: this, details: this.details});
+
+        // devlog(details);
+
+        var playerNames = [];
+        var playerIds = []; // same order as playerNames/uuids/usernames - the numeric id sendable back via a "kick" adminCommand (see legacyadmin's game/moderationWorker.js)
+        iteratePlayers((player, i)=>{ playerNames.push(player?.name); playerIds.push(i); });
+
+        parentPort.postMessage([Comm.Worker.updateRoom, {
+            ready: true,
+            playerLimit: this.playerLimit,
+            playerCount: this.details.count,
+            usernames: this.details.usernames,
+            uuids: this.details.uuids,
+            sessions: this.details.sessions,
+
+            playerNames,
+            playerIds,
+
+            joinType: this.joinType,
+            gameType: this.gameType,
+            gameOptions: this.gameOptions,
+            mapId: this.mapId,
+            gameId: this.gameId,
+            gameKey: this.gameKey,
+            locked: this.locked,
+        }]);
+
+        plugins.emit('roomDetailsUpdatedEnd', {this: this, details: this.details});
+    };
+
+    updateRoomParamsForClients() {
+        var output = new Comm.Out();
+        this.packUpdateRoomParams(output);
+        this.sendToAll(output, null, "updateRoomParams");
+    };
+
+    packUpdateRoomParams(output) {
+        plugins.emit('packUpdateRoomParams', {this: this, output});
+        output.packInt8U(Comm.Code.updateRoomParams);
+        var gameOptions = {
+            cheatsEnabled: this.gameOptions.cheatsEnabled,
+            timedGame: this.gameOptions.timedGame,
+            // weather/time now live under gameOptions.plugins (legacyweather plugin), already
+            // carried by the line below - no longer named here individually.
+            plugins: this.gameOptions.plugins,
+        };
+        output.packLongString(JSON.stringify(gameOptions)); //is this technically bloated? yes, but its the only way i can do this such that adding new options is easy
+        plugins.emit('packUpdateRoomParamsEnd', {this: this, output});
+    };
+
+    enableCheats() {
+        this.gameOptions.cheatsEnabled = true;
+        this.updateRoomParamsForClients();
+    };
+
+    //touching an enemy hurts them for the toucher's contactDamage modifier (hp per hit). Not scaled by damageModifier, so a team
+    //that can't shoot (damageModifier 0) can still bite.
+    //one hit per victim per gameOptions.contactCooldown ms, so a crowd can't drain someone at 60 hits a second.
+    contactDamageUpdate(now = Date.now()) {
+        const attackers = [];
+        const victims = [];
+
+        iteratePlayers(player => {
+            if (!player.playing || player.isDead()) return;
+            victims.push(player);
+            if (player.modifiers.contactDamage > 0) attackers.push(player);
+        });
+
+        if (!attackers.length) return;
+
+        const reach = this.gameOptions.contactReach ?? 0.1; //leniency on top of the two hitboxes (0.5 wide, 0.6 tall, origin at the feet) just touching
+
+        for (const victim of victims) {
+            if (victim.nextContactHit > now) continue;
+            const victimScale = victim.modifiers.scale || 1;
+
+            for (const attacker of attackers) {
+                if (attacker === victim) continue;
+                if (victim.team !== 0 && victim.team === attacker.team) continue; //team 0 is ffa, everyone is an enemy
+
+                const attackerScale = attacker.modifiers.scale || 1;
+                const touching = 0.25 * (victimScale + attackerScale) + reach; //centre to centre
+                const dx = victim.x - attacker.x;
+                const dz = victim.z - attacker.z;
+                const length = Math.hypot(dx, dz);
+                if (length > touching) continue;
+
+                const dy = victim.y - attacker.y; //feet to feet
+                if (dy > 0.6 * attackerScale || dy < -0.6 * victimScale) continue;
+
+                const damage = attacker.modifiers.contactDamage;
+
+                victim.nextContactHit = now + this.gameOptions.contactCooldown;
+                victim.hit(damage, attacker, length ? dx / length : 0, length ? dz / length : 1, undefined, damage); //direction of travel: from the toucher to the victim
+                break; //one hit per cooldown, whoever got there first
+            };
+        };
+    };
+
+    async updateLoop (delta) {
+        var currentTimeStamp = Date.now();
+        this.existedFor = Date.now() - this.startTime;
+        plugins.emit('roomUpdate', {this: this, delta, currentTimeStamp});
+
+        while (this.lastTimeStamp < currentTimeStamp) { //repeat until catching up :shrug:
+            this.lastTimeStamp += TickStep;
+
+            this.munitionsManager.update(1);
+
+            //i dont understand their netcode wtf
+            await iteratePlayersAsync(async player => {
+                plugins.emit('playerUpdate', {this: this, player, delta, currentTimeStamp});
+                // console.log("lóóp", delta, this.lastTimeStamp, currentTimeStamp, player.stateIdx, player.syncStateIdx);
+                if (!player.client.isHuman) {
+                    await player.update(1);
+                } else if (player.stateIdx !== player.syncStateIdx) while (player.stateIdx !== player.syncStateIdx) {
+                    player.chatLineCap = Math.min(player.chatLineCap + 1 / (chatCooldown * 4), 3); //3 lines per second (idk why 4 works)
+                    plugins.emit('playerStateUpdate', {this: this, player, delta, currentTimeStamp});
+                    await player.update(1);
+                    player.resetPrediction();
+                    // console.log(player.x, player.y, player.z, player.controlKeys, player.stateIdx, this.serverStateIdx);
+                } else {
+                    player.predictUpdate(1);
+                };
+                player.incrementStatesUsed();
+            });
+
+            this.contactDamageUpdate(currentTimeStamp);
+
+            plugins.emit('roomStateUpdate', {this: this, delta, currentTimeStamp});
+
+            this.serverStateIdx = Math.mod(this.serverStateIdx + 1, stateBufferSize);
+
+            // console.log(this.serverStateIdx, FramesBetweenSyncs, this.serverStateIdx % FramesBetweenSyncs === 0)
+
+            if (this.serverStateIdx % FramesBetweenSyncs === 0) {
+                plugins.emit('roomSync', {this: this});
+                await this.sync();
+            };
+        };
+    };
+
+    //occurs every second, to reduce the data sent in the main sync but also facilitate some less important data that benefits from syncing
+    async dataSyncLoop(delta) {
+        var output = new Comm.Out();
+        plugins.emit('dataSyncLoop', {this: this, delta, output});
+
+        this.clients_by_id.forEach(client => {
+            plugins.emit('clientDataSync', {this: this, client, delta, output});
+            client.packDataSync(output);
+        });
+
+        plugins.emit('roomDataSync', {this: this, delta, output});
+        this.sendToAll(output, null, "dataSync");
+    };
+
+    metaLoop(fromDisconnect) {
+        // console.log("metaLoop", this.getPlayerCount(), this.existedFor, fromDisconnect);
+        plugins.emit('metaLoop', {this: this, fromDisconnect});
+        if (this.getPlayerCount(undefined, undefined, true) === 0 && (fromDisconnect === true || this.existedFor > 5e3)) {
+            this.destroy();
+            return;
+        };
+        this.clients_by_id.forEach(client => {
+            plugins.emit('metaLoopClients', {this: this, client, fromDisconnect});
+
+            client.lastSeenDelta = Date.now() - client.player.lastActivity;
+            client.lastPingDelta = Date.now() - client.lastPingTime;
+
+            // console.log(client.id, client.clientIsReady);
+            // console.log("lastSeenDelta", client.lastSeenDelta, "lastPingDelta", client.lastPingDelta);
+
+            var connectionTimeout = client.clientIsReady ? 15e3 : 45e3; //still loading (no clientReady yet) gets longer, a tab in the background can stall its map build
+            if ((client.lastPingDelta > connectionTimeout) && !client.noConnectionTimeout) { // kick if over 15 secs since last connection (45 while still loading)
+                log.orange("closing ws with id", client.id, `due to ${connectionTimeout / 1e3}s connection timeout`);
+                client.sendCloseToWs();
+            };
+            if (client.lastSeenDelta > 5 * 60e3) { // kick if idle for 5 mins
+                log.orange("closing ws with id", client.id, "due to idle timeout");
+                client.sendCloseToWs();
+            };
+        });
+        // Thunder-strike scheduling (1-in-4 chance of a synced lightning strike while storm is
+        // enabled, every ~2s via this same metaLoop cadence) moved to the legacyweather plugin's
+        // own metaLoop listener - the emit above already covers it, no new hook needed.
+    };
+
+    destroy() {
+        console.log("destroy room", this.existedFor, this.gameId);
+        plugins.emit('roomDestroy', {this: this});
+
+        //most of this is redundant now, but eh.
+        try {
+            this.players_by_id = null;
+            this.clients_by_id = null;
+            this.map = null;
+            this.Collider = null;
+            this.engine = null;
+            this.scene = null;
+            this.updateLoopObject.stop();
+            this.metaLoopObject.stop();
+        } catch (error) { } //possible that some wasnt initted, or something
+
+        removeCanvasResources();
+
+        parentPort.postMessage([Comm.Worker.terminate, this.gameId]);
+
+        // parentPort.close();
+
+        // process.exit(0);
+    };
+
+    async sync() {
+        var output = new Comm.Out();
+        await plugins.emit('clientSync', {this: this, output});
+        for (const client of this.clients_by_id) {
+            if (client) {
+                await plugins.emit('clientSyncLoop', { this: this, client, output });
+                if (!plugins.cancel) {
+                    await client.packSync(output);
+                };
+            };
+        };
+        await plugins.emit('clientSyncEnd', {this: this, output});
+        if (!plugins.cancel) this.sendToAll(output, null, "sync");
+    };
+
+    async joinPlayer(info) {
+        info.id = this.getUnusedPlayerId(info.useOOBid); //info.wsId !== null
+        plugins.emit('joinPlayer', {this: this, info});
+
+        console.log(info.wsId, `joining new player (human? ${!info.isBot}) with assigned id:`, info.id, info.nickname, this.getPlayerCount());
+
+        const client = new ClientConstructor(this, info);
+
+        if (!info.isBot) this.wsId_to_client[info.wsId] = client;
+
+        // const client = new ClientConstructor(this, info, ws);
+        // const player = client.player;
+
+        return client;
+    };
+
+    registerPlayerClient(client) {
+        plugins.emit('registerPlayerClient', {this: this, client});
+        this.clients_by_id[client.id] = client;
+        this.players_by_id[client.id] = client.player;
+    };
+
+    disconnectClient(client) {
+        plugins.emit('disconnectClient', {this: this, client});
+        client.timeout.clearAll();
+        client.interval.clearAll();
+
+        delete this.clients_by_id[client.id];
+        delete this.players_by_id[client.id];
+
+        var output = new Comm.Out(2);
+        output.packInt8U(Comm.Code.removePlayer);
+        output.packInt8U(client.id);
+        this.sendToAll(output, null, "removePlayer");
+
+        console.log('Client disconnected', client.id);
+
+        this.setGameOwner();
+        this.updateRoomDetails();
+
+        this.metaLoop(true);
+    };
+
+    getPlayerCount(team, extraDetails, humansOnly) {
+        let count = 0;
+        let uuids = [];
+        let usernames = [];
+        let sessions = [];
+
+        iteratePlayers(player => {
+            if (!(typeof(team) == "number" && team !== player.team)) {
+                if (humansOnly && !player.client.isHuman) return;
+                count++;
+                uuids.push(player.client.uuid);
+                sessions.push(player.client.session);
+                usernames.push(player.client.username);
+                plugins.emit('getPlayerCountLoop', {this: this, count, uuids, usernames, sessions, player, extraDetails});
+            };
+        });
+
+        plugins.emit('getPlayerCount', {this: this, count, uuids, usernames, sessions, extraDetails});
+
+        return extraDetails ? {count, uuids, usernames} : count;
+    };
+
+    getOldestClient() {
+        let oldestClient = null;
+        let oldestTime = 9e99;
+        for (let i = 0; i < this.clients_by_id.length; i++) {
+            var client = this.clients_by_id[i];
+            if (client) {
+                plugins.emit('getOldestClientLoop', {this: this, client, oldestClient, oldestTime});
+                if (client.joinedTime < oldestTime) {
+                    oldestClient = client;
+                    oldestTime = client.joinedTime;
+                };
+            };
+        };
+        plugins.emit('getOldestClient', {this: this, oldestClient});
+        return oldestClient;
+    };
+
+    packSetGameOwner (output) {
+        plugins.emit('packSetGameOwner', {this: this, output});
+        if (this.gameOwner) {
+            plugins.emit('packSetGameOwnerFound', {this: this, output});
+            output.packInt8U(Comm.Code.setGameOwner);
+            output.packInt8U(this.gameOwner.id);
+        };
+    };
+
+    setGameOwner() {
+        // devlog("pls find a new owner pls 1", this.joinType, Comm.Code.createPrivateGame);
+        plugins.emit('setGameOwner', {this: this});
+        if (this.joinType === Comm.Code.createPrivateGame) {
+            plugins.emit('setGameOwnerPrivate', {this: this});
+            // devlog("pls find a new owner pls 2");
+            var newOwner = this.getOldestClient();
+            if (newOwner) {
+                devlog("found new owner", newOwner.id);
+                if (this.gameOwner !== newOwner) {
+                    plugins.emit('setGameOwnerNew', {this: this, newOwner});
+                    this.gameOwner = newOwner;
+                    var output = new Comm.Out(2);
+                    this.packSetGameOwner(output);
+                    this.sendToAll(output, null, "setGameOwner");
+                };
+                iteratePlayers((player)=>{
+                    player.isGameOwner = player.id === this.gameOwner.player.id;
+                });
+            } else {
+                devlog("didnt new owner");
+            };
+        };
+    };
+
+    getRandomSpawn(player) {
+        const list = this.spawnPoints[player.team];
+        const pos = Math.getRandomFromList(list);
+        plugins.emit('getRandomSpawn', {this: this, player, list, pos});
+
+        return {
+            x: pos.x + 0.5,
+            y: pos.y,
+            z: pos.z + 0.5,
+            yaw: Math.random() * Math.PI2,
+            pitch: 0,
+        };
+    };
+
+    getBestSpawn(player) {
+        if (this.getPlayerCount() < 2) return this.getRandomSpawn(player);
+        plugins.emit('getBestSpawn', {this: this, player});
+
+        const list = this.spawnPoints[player.team];
+        let best = false;
+        let bestDistance = -1; //bestDistance should be as big as possible
+
+        list.forEach((spwn) => {
+            const spawnPos = new BABYLON.Vector3(spwn.x, spwn.y, spwn.z);
+            let smallestDistance = -1;
+
+            plugins.emit('getBestSpawnLoop', {this: this, player, spwn, spawnPos, smallestDistance});
+
+            iteratePlayers((play) => {
+                if (
+                    (player.team !== 0 && play.team === player.team) || //team check
+                    !play.playing || //playing check
+                    play.isDead() //is playing
+                ) return;
+                const playPos = new BABYLON.Vector3(play.x, play.y, play.z);
+                const dist = BABYLON.Vector3.Distance(spawnPos, playPos);
+                if (dist < smallestDistance || smallestDistance === -1) smallestDistance = dist;
+            });
+            if (smallestDistance > bestDistance || bestDistance === -1) { //kinda unneccesary bc -1 will always be smaller than smallestDistance but eh
+                best = spwn;
+                bestDistance = smallestDistance;
+            };
+        });
+
+        plugins.emit('getBestSpawnEnd', {this: this, player, best, bestDistance});
+
+        // console.log("best spawn", best, bestDistance);
+
+        if (bestDistance === -1) return this.getRandomSpawn(player);
+        return {
+            x: best.x + 0.5,
+            y: best.y,
+            z: best.z + 0.5,
+            yaw: Math.random() * Math.PI2,
+            pitch: 0,
+        };
+    };
+
+    getValidItemSpawns () {
+        let data = this.map.data;
+        plugins.emit('getValidItemSpawns', {this: this, data});
+        for (var x = 0; x < data.length; x++) {
+            for (var y = 0; y < data[x].length; y++) {
+                for (var z = 0; z < data[x][y].length; z++) {
+                    if (
+                        this.itemManager.checkPosition(x, y, z, this.map) == MAP.blank &&
+                        this.itemManager.checkBelow(x, y, z, this.map) == MAP.block
+                    ) {
+                        plugins.emit('getValidItemSpawnsLoop', {this: this, x, y, z});
+                        this.validItemSpawns.push([x, y, z]);
+                    };
+                };
+            };
+        };
+
+        // console.log(this.validItemSpawns);
+        this.validItemSpawns = Math.shuffleArray(this.validItemSpawns);
+        // console.log(this.validItemSpawns);
+
+        plugins.emit('getValidItemSpawnsEnd', {this: this});
+
+        console.log('Finished loading item spawns!');
+    };
+
+    notify(text, timeoutTime = 5) {
+        this.clients_by_id.forEach(client => {
+            if (client.clientIsReady) {
+                plugins.emit('notify', {this: this, client, text, timeoutTime});
+                client.notify(text, timeoutTime);
+            };
+        });
+    };
+
+    packChat(output, text, id = 255, chatType = Comm.Chat.user) {
+        plugins.emit('packChat', {this: this, output, text, id, chatType});
+        output.packInt8U(Comm.Code.chat);
+        output.packInt8U(chatType);
+        output.packInt8U(id);
+        output.packLongString(text);
+        plugins.emit('packChatEnd', {this: this, output, text, id, chatType});
+    };
+
+    packSpawnItemPacket(output, id, kind, x, y, z) {
+        plugins.emit('packSpawnItemPacket', {this: this, output, id, kind, x, y, z});
+        output.packInt8U(Comm.Code.spawnItem);
+        output.packInt16U(id);
+        output.packInt8U(kind);
+        output.packInt16U(x*2);
+        output.packInt16U(y*10);
+        output.packInt16U(z*2);
+        plugins.emit('packSpawnItemPacketEnd', {this: this, output, id, kind, x, y, z});
+    };
+
+    packCollectItemPacket(output, playerId, kind, index, id) {
+        plugins.emit('packCollectItemPacket', {this: this, output, playerId, kind, index, id});
+        output.packInt8U(Comm.Code.collectItem);
+        output.packInt8U(playerId);
+        output.packInt8U(kind);
+        output.packInt8U(index);
+        output.packInt16U(id);
+        plugins.emit('packCollectItemPacketEnd', {this: this, output, playerId, kind, index, id});
+    };
+
+    packAllItems (output) {
+        let pools = this.itemManager.pools;
+        plugins.emit('packAllItems', {this: this, output, pools});
+        for (let i = 0; i < pools.length; i++) {
+            let pool = pools[i];
+
+            pool.forEachActive((item) => {
+                plugins.emit('packAllItemsLoop', {this: this, output, item, i});
+                this.packSpawnItemPacket(output, item.id, i, item.x, item.y, item.z);
+            });
+        };
+    };
+
+    spawnItems() {
+        let pools = this.itemManager.pools;
+        var output = new Comm.Out();
+
+        plugins.emit('spawnItems', {this: this, pools, output});
+
+        for (let i = 0; i < pools.length; i++) {
+            let pool = pools[i];
+            let maximum = 0;
+            this.gameOptions.itemsEnabled.forEach((itemOptions)=>{
+                if (itemOptions[0] === i) {
+                    maximum = Math.ceil(this.minMap.surfaceArea / itemOptions[1]);
+                    maximum = Math.clamp(maximum, itemOptions[2], pool.originalSize);
+                };
+            });
+
+            plugins.emit('spawnItemsLoop', {this: this, pool, i, maximum, output});
+
+            while (pool.numActive < maximum) {
+                var pos = this.getItemSpawnFromQueue();
+
+                var x = pos[0] + 0.5;
+                var y = pos[1] + 0.1;
+                var z = pos[2] + 0.5;
+
+                plugins.emit('spawnItemsLoopSpawn', {this: this, pool, i, maximum, output, x, y, z});
+
+                devlog("item type", i, "current active", pool.numActive, "max", maximum);
+                // devlog(id, pos);
+
+                var item = this.itemManager.spawnItem(null, i, x, y, z);
+
+                plugins.emit('spawnItemsLoopSpawnEnd', {this: this, pool, i, maximum, output, x, y, z, item});
+
+                this.packSpawnItemPacket(output, item.id, i, x, y, z);
+            };
+        };
+
+        plugins.emit('spawnItemsEnd', {this: this, pools, output});
+
+        if (output.idx > 0) this.sendToAll(output, null, "spawnItem");
+    };
+
+    getItemSpawnFromQueue() { //this is a queue, so it will rotate the positions
+        var pos = this.validItemSpawns[0];
+
+        plugins.emit('getItemSpawnFromQueue', {this: this, pos});
+
+        this.validItemSpawns.push(this.validItemSpawns.shift());
+
+        plugins.emit('getItemSpawnFromQueueEnd', {this: this, pos});
+
+        return pos;
+    };
+
+    getUnusedPlayerId(useOOBid = false) {
+        plugins.emit('getUnusedPlayerId', {this: this});
+
+        let unusedId = null;
+
+        let i = useOOBid ? maxServerSlots : 0;
+        let limit = i + (useOOBid ? 100 : this.playerLimit);
+
+        for (; i < limit; i++) {
+            const player = this.players_by_id[i]; //this is the one case where we can do this instead of the iteratePlayers function
+            const client = this.clients_by_id[i];
+            plugins.emit('getUnusedPlayerIdLoop', {this: this, i, client, player});
+
+            if (!client && !player) {
+                unusedId = i;
+                break;
+            }
+        };
+
+        return unusedId;
+    };
+
+    getPreferredTeam() {
+        plugins.emit('getPreferredTeam', {this: this});
+
+        if (!this.gameOptions.teamsEnabled) {
+            return 0;
+        } else {
+            var team1Count = this.getPlayerCount(1);
+            var team2Count = this.getPlayerCount(2);
+
+            plugins.emit('getPreferredTeamEnd', {this: this, team1Count, team2Count});
+
+            return team1Count > team2Count ? 2 : 1;
+        };
+    };
+
+    getPlayerClient(id) {
+        const client = this.clients_by_id[id];
+        const player = this.players_by_id[id];
+        plugins.emit('getPlayerClient', {this: this, client, player});
+        if (client && player) return [client, player];
+        else return [null, null];
+    };
+
+    packAllPlayers(output) {
+        plugins.emit('packAllPlayers', {this: this, output});
+        this.clients_by_id.forEach(client => {
+            if (client?.clientIsReady) {
+                devlog("packing", client.id, client.player.name) // ayo
+                plugins.emit('packAllPlayersLoop', {this: this, output, client});
+                client.packPlayer(output);
+            };
+        });
+    };
+
+    //semi stolen from rtw (is good code)
+    sendToOne(output, fromId, toId, debug) {
+        const client = this.clients_by_id[toId];
+        plugins.emit('sendToOne', {this: this, output, fromId, toId, debug});
+        if (client?.clientIsReady) {
+            plugins.emit('sendToOneFound', {this: this, output, fromId, toId, debug});
+            client.sendBuffer(output, "sendToOne: " + debug + " | from " + fromId);
+        };
+
+        // //idk why it was done like this? there shouldnt be multiple clients with same id :<
+        // this.clients_by_id.forEach(client => {
+        //     if (client.clientIsReady && client.id === fromId) client.sendBuffer(output, "sendToOne: " + debug + " | from " + fromId);
+        // });
+    };
+
+    sendToOthers(output, fromId, debug) {
+        plugins.emit('sendToOthers', {this: this, output, fromId, debug});
+        this.clients_by_id.forEach(client => {
+            plugins.emit('sendToOthersLoop', {this: this, client, output, fromId, debug});
+            if (client.clientIsReady && client.id !== fromId) {
+                plugins.emit('sendToOthersLoopFound', {this: this, client, output, fromId, debug});
+                client.sendBuffer(output, "sendToOthers: " + debug + " | from " + fromId);
+            };
+        });
+    };
+
+    sendToAll(output, fromId, debug) {
+        plugins.emit('sendToAll', {this: this, output, fromId, debug});
+        this.clients_by_id.forEach(client => {
+            plugins.emit('sendToAllLoop', {this: this, client, output, fromId, debug});
+            if (client.clientIsReady) {
+                plugins.emit('sendToAllLoopFound', {this: this, client, output, fromId, debug});
+                client.sendBuffer(output, "sendToAll: " + debug + " | from " + fromId);
+            };
+        });
+    };
+};
+
+plugins.emit('roomLoaded', {RoomConstructor});
+
+export default RoomConstructor;

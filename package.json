@@ -1,0 +1,16 @@
+{
+  "name": "shell-shockers-may-2019-preservation",
+  "version": "0.20.1-reconstruction.1",
+  "private": true,
+  "type": "module",
+  "description": "A runnable preservation of the May 2019 Shell Shockers client, with a reconstructed local server.",
+  "scripts": {
+    "start": "node server/index.mjs",
+    "dev": "node server/index.mjs",
+    "build": "node scripts/prepare-client.mjs && node scripts/build.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": { "ws": "8.18.3" },
+  "devDependencies": { "prettier": "3.6.2" },
+  "engines": { "node": ">=22" }
+}

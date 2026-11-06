@@ -1,0 +1,32 @@
+{
+  "Nunito-Regular.ttf": {
+    "source_url": "https://raw.githubusercontent.com/google/fonts/933df38730df8e7a99d5ba1cf5071b26b7894910/ofl/nunito/Nunito-Regular.ttf",
+    "source_kind": "google-fonts-commit-before-2019-05-13",
+    "bytes": 114012,
+    "sha256": "9d958cf411edb1b4a0ae3d9a62e7e9d23124ac6d30402aff4d9dc8ea8cd7beee"
+  },
+  "Nunito-SemiBold.ttf": {
+    "source_url": "https://raw.githubusercontent.com/google/fonts/933df38730df8e7a99d5ba1cf5071b26b7894910/ofl/nunito/Nunito-SemiBold.ttf",
+    "source_kind": "google-fonts-commit-before-2019-05-13",
+    "bytes": 116148,
+    "sha256": "c01f8ea857d7f02729f45c77d721c7e7200c975dd4c88bacec153fc4f8d21dbd"
+  },
+  "Nunito-Bold.ttf": {
+    "source_url": "https://raw.githubusercontent.com/google/fonts/933df38730df8e7a99d5ba1cf5071b26b7894910/ofl/nunito/Nunito-Bold.ttf",
+    "source_kind": "google-fonts-commit-before-2019-05-13",
+    "bytes": 116028,
+    "sha256": "0a2c124569bc97b3f088e4fd22423b68c45df5bd85c88e5aa80c5c2f2cf99405"
+  },
+  "Nunito-Black.ttf": {
+    "source_url": "https://raw.githubusercontent.com/google/fonts/933df38730df8e7a99d5ba1cf5071b26b7894910/ofl/nunito/Nunito-Black.ttf",
+    "source_kind": "google-fonts-commit-before-2019-05-13",
+    "bytes": 116068,
+    "sha256": "055805e22a7efc737c3a0a4bc0423ac30b95f82acfef507b8af840a1ba877592"
+  },
+  "SigmarOne-Regular.ttf": {
+    "source_url": "https://raw.githubusercontent.com/google/fonts/b7f0cc9e1bf34f771d90dff4a8e603e3dba59bb6/ofl/sigmarone/SigmarOne-Regular.ttf",
+    "source_kind": "google-fonts-commit-before-2019-05-13",
+    "bytes": 172512,
+    "sha256": "0817eb698a5c4aac2c07bb84be1ead806494c489da468db23f5ffd9bcf3f0970"
+  }
+}

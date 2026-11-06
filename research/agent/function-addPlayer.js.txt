@@ -1,0 +1,1 @@
+function addPlayer(playerData){playerData.id==meId&&(viewingPlayerId=playerData.id);var player=new Player(playerData,gameScene);player.id==meId&&(viewingPlayer=me=player,me.ws=ws,updateAmmoUi()),player.playing||player.actor.removeFromPlay(),players[playerData.id]=player,rebuildPlayerList()}

@@ -1,0 +1,10 @@
+/* The original May styles are retained. Only retired ad widgets are hidden. */
+#twitchContainer, #twitchStreams, #showBuyPassDialogButton, #privacyOptionsLink,
+#oneSignalBell, #onesignal-bell-container { display: none !important; }
+#menuAdContainer { display: none !important; }
+#mainMenu { overflow: hidden; }
+html, body { margin: 0; }
+body { overflow: hidden !important; }
+.pane_faq { display: none; }
+#consent, #privacyOptions, #showItemTemplate { display: none; }
+#versionlink a { cursor: pointer; }

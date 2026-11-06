@@ -1,0 +1,1 @@
+Player.prototype.collidesWithMap=function(){return Collider.playerCollidesWithMap(this)}

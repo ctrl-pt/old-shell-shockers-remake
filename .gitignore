@@ -1,0 +1,14 @@
+node_modules/
+tools/
+.env
+dist/
+artifacts/
+outputs/
+*.log
+.openai/deploy.tar.gz
+research/rea-evidence.json
+research/rea/
+research/rea-skill-tree.json
+research/shellshock-readable.js
+research/core-slice.txt
+research/agent/shellshock-*.js

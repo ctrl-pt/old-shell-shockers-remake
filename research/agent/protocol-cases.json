@@ -1,0 +1,170 @@
+[
+  {
+    "name": "CommCode.pause",
+    "start": 3155729,
+    "end": 3155845,
+    "source": "case CommCode.pause:var playerId=input.unPackInt8U(),player=players[playerId];player&&player.removeFromPlay();break;"
+  },
+  {
+    "name": "CommCode.clientReady",
+    "start": 3155845,
+    "end": 3155997,
+    "source": "case CommCode.clientReady:console.log(\"CommCode.clientReady received\"),respawnTime=-1,openGameMenu(),startRendering(),autoInvite&&inviteFriends();break;"
+  },
+  {
+    "name": "CommCode.spatula",
+    "start": 3155997,
+    "end": 3157097,
+    "source": "case CommCode.spatula:var p={x:input.unPackFloat(),y:input.unPackFloat(),z:input.unPackFloat()},controlledBy=input.unPackInt8U(),controlledByTeam=input.unPackInt8U();if(spatula){if(spatula.controlledBy!=controlledBy){var teamLabels=[\"\",'<h1 class=\"blueTeam\">'+getLocText(\"ui_game_blue\")+\"</h1>\",'<h1 class=\"redTeam\">'+getLocText(\"ui_game_red\")+\"</h1>\"];if(255==controlledBy){if(me.playing){var el=document.getElementById(\"gameMessage\");el.innerHTML=teamLabels[spatula.controlledByTeam],el.innerHTML+=\"<p>DROPPED<br>the spatula!</p>\",el.style.display=\"block\",setTimeout(function(){document.getElementById(\"gameMessage\").style.display=\"none\"},3e3)}spatula.drop(p)}else{if(me.playing){var el=document.getElementById(\"gameMessage\");el.innerHTML=teamLabels[controlledByTeam],el.innerHTML+=\"<p>CAPTURED<br>the spatula!</p>\",el.style.display=\"block\",setTimeout(function(){document.getElementById(\"gameMessage\").style.display=\"none\"},3e3)}spatula.capture(players[controlledBy])}}}else(spatula=new Spatula(gameScene,p)).controlledBy=controlledBy,spatula.controlledByTeam=controlledByTeam;updateTeamUI();break;"
+  },
+  {
+    "name": "CommCode.addPlayer",
+    "start": 3157097,
+    "end": 3158717,
+    "source": "case CommCode.addPlayer:var id=input.unPackInt8U(),uniqueId=input.unPackInt16U(),name=input.unPackString(),charClass=input.unPackInt8U();17<id&&debugArray.push(\"playerId out of bounds: \"+id+\", \"+name);var playerData={id:id,uniqueId:uniqueId,name:name,charClass:charClass,team:input.unPackInt8U(),primaryWeaponItem:catalog.findItemBy8BitItemId(ItemType.Primary,charClass,input.unPackInt8U()),secondaryWeaponItem:catalog.findItemBy8BitItemId(ItemType.Secondary,charClass,input.unPackInt8U()),shellColor:input.unPackInt8U(),hatItem:catalog.findItemBy8BitItemId(ItemType.Hat,charClass,input.unPackInt8U()),stampItem:catalog.findItemBy8BitItemId(ItemType.Stamp,charClass,input.unPackInt8U()),x:input.unPackFloat(),y:input.unPackFloat(),z:input.unPackFloat(),dx:input.unPackFloat(),dy:input.unPackFloat(),dz:input.unPackFloat(),yaw:input.unPackRadU(),pitch:input.unPackRad(),score:input.unPackInt32U(),kills:input.unPackInt16U(),deaths:input.unPackInt16U(),streak:input.unPackInt16U(),totalKills:input.unPackInt32U(),totalDeaths:input.unPackInt32U(),bestGameStreak:input.unPackInt16U(),bestOverallStreak:input.unPackInt16U(),shield:input.unPackInt8U(),hp:input.unPackInt8U(),playing:input.unPackInt8U(),weaponIdx:input.unPackInt8U(),controlKeys:input.unPackInt8U(),randomSeed:input.unPackInt16U(),upgradeProductId:input.unPackInt8U()};players[playerData.id]||(meId==playerData.id||(playerData.name=playerData.name.replace(/<|>/g,\"\"),0==playerData.name.length?playerData.name=\"Anonymous\":(playerData.name=fixStringWidth(playerData.name),isBadWord(playerData.name)&&(playerData.name=randomName()))),addPlayer(playerData));break;"
+  },
+  {
+    "name": "CommCode.removePlayer",
+    "start": 3158717,
+    "end": 3158806,
+    "source": "case CommCode.removePlayer:var playerId=input.unPackInt8U();removePlayer(playerId);break;"
+  },
+  {
+    "name": "CommCode.spawnItem",
+    "start": 3158806,
+    "end": 3158992,
+    "source": "case CommCode.spawnItem:var id=input.unPackInt16U(),kind=input.unPackInt8U(),x=input.unPackFloat(),y=input.unPackFloat(),z=input.unPackFloat();itemManager.spawnItem(id,kind,x,y,z);break;"
+  },
+  {
+    "name": "CommCode.collectItem",
+    "start": 3158992,
+    "end": 3159230,
+    "source": "case CommCode.collectItem:var playerId=input.unPackInt8U(),kind=input.unPackInt8U(),applyToWeaponIdx=input.unPackInt8U(),id=input.unPackInt16U();itemManager.collectItem(kind,id),playerId==meId&&me.collectItem(kind,applyToWeaponIdx);break;"
+  },
+  {
+    "name": "CommCode.die",
+    "start": 3159230,
+    "end": 3161706,
+    "source": "case CommCode.die:var killedPlayerName,byPlayerName,killedId=input.unPackInt8U(),byId=input.unPackInt8U(),rs=input.unPackInt8U(),killedPlayer=players[killedId],byPlayer=players[byId];if(killedPlayer){if(spatula){var otherTeam=1==killedPlayer.team?2:1;spatula.controlledByTeam==otherTeam&&(teamScore[otherTeam]++,updateTeamUI())}killedPlayerName=killedPlayer.name;var pos=new BABYLON.Vector3(killedPlayer.x,killedPlayer.y+.32,killedPlayer.z);Sounds.shellBurst.play(pos);var soundIdx=Math.randomInt(0,Sounds.death.length);Sounds.death[soundIdx].setPosition(pos),Sounds.death[soundIdx].play(),shellFragBurst(killedPlayer,80,.2,40),yolkBurst(killedPlayer),killedPlayer.die(),killedPlayer.actor.mesh.position.x=killedPlayer.x,killedPlayer.actor.mesh.position.y=killedPlayer.y,killedPlayer.actor.mesh.position.z=killedPlayer.z}else killedPlayerName=\"N/A\";if(byPlayer){if(byPlayerName=byPlayer.name,!byPlayer.isDead()){if(byPlayer.scoreKill(),byId==meId){var el=document.getElementById(\"bestStreak\");el.innerText=byPlayer.bestOverallStreak}byId==meId&&(kills++,bestOverallStreak=Math.max(bestOverallStreak,byPlayer.streak))}}else byPlayerName=\"N/A\";if(killedId!=meId){if(byId==meId){var killBox=document.getElementById(\"killBox\");killBox.style.display=\"block\",document.getElementById(\"KILLED_NAME\").innerText=killedPlayerName;var streakEl=document.getElementById(\"KILL_STREAK\");1<me.streak?streakEl.innerText=me.streak+\"-KILL STREAK\":streakEl.innerText=\"\";var scale=1.5,scaleInterval=interval.set(function(){killBox.style.transform=\"scale(\"+scale+\",\"+scale+\")\",(scale-=.05)<=1&&(scale=1,interval.clear(scaleInterval))},33);timeout.set(function(){inGame&&(killBox.style.display=\"none\")},4e3)}}else{camera.parent=null,camera.position=new BABYLON.Vector3(viewingPlayer.actor.mesh.position.x,viewingPlayer.actor.mesh.position.y+.2,viewingPlayer.actor.mesh.position.z),byPlayer&&(camera.lockedTarget=byPlayer.actor.bodyMesh),document.getElementById(\"KILLED_BY_NAME\").innerText=byPlayerName;var deathBox=document.getElementById(\"deathBox\");deathBox.style.display=\"block\";var scale=2,scaleInterval=interval.set(function(){deathBox.style.transform=\"scale(\"+scale+\",\"+scale+\")\",(scale-=.05)<=1&&inGame&&(interval.clear(scaleInterval),scale=1)},33);deaths++,setRespawnTime(rs),removeCanvasListeners(),timeout.set(function(){inGame&&(deathBox.style.display=\"none\",viewingPlayerId==meId&&openGameMenu())},3e3)}byPlayer&&killedPlayer&&addKillText(byPlayer,killedPlayer),rebuildPlayerList();break;"
+  },
+  {
+    "name": "CommCode.chat",
+    "start": 3161706,
+    "end": 3161975,
+    "source": "case CommCode.chat:var playerId=input.unPackInt8U(),text=input.unPackString(),player=players[playerId];player.muted||(chatParser.innerHTML=text,text=chatParser.textContent.trim(),player&&0<text.length&&!isBadWord(text)&&text.indexOf(\"<\")<0&&addChat(text,player));break;"
+  },
+  {
+    "name": "CommCode.jump",
+    "start": 3161975,
+    "end": 3162077,
+    "source": "case CommCode.jump:var id=input.unPackInt8U(),player=players[id];if(!player)break;player.jump();break;"
+  },
+  {
+    "name": "CommCode.sync",
+    "start": 3162077,
+    "end": 3164137,
+    "source": "case CommCode.sync:var id=input.unPackInt8U(),stateIdx=input.unPackInt8U(),x=input.unPackFloat(),y=input.unPackFloat(),z=input.unPackFloat(),climbing=input.unPackInt8U(),player=players[id];if(!player){for(var i=0;i<FramesBetweenSyncs;i++)input.unPackInt8U(),input.unPackRadU(),input.unPackRad();break}var oldx=player.x,oldy=player.y,oldz=player.z,olddx=player.dx,olddy=player.dy,olddz=player.dz,oldYaw=player.yaw,oldPitch=player.pitch,wasJumping=player.jumping,wasClimbing=player.climbing;if(id==meId){for(var i=0;i<FramesBetweenSyncs;i++)input.unPackInt8U(),input.unPackRadU(),input.unPackRad();var i=stateIdx,state=player.stateBuffer[i];player.x=x,player.y=y,player.z=z,player.dx=state.dx,player.dy=state.dy,player.dz=state.dz,player.climbing=state.climbing,player.jumping=state.jumping;for(var oldKeys=me.controlKeys;i!=player.stateIdx;i=Math.mod(i+1,stateBufferSize))state=player.stateBuffer[i],player.controlKeys=state.controlKeys,player.yaw=state.yaw,state.jump&&player.jump(),player.update(!0),player.stateBuffer[i].x=player.x,player.stateBuffer[i].y=player.y,player.stateBuffer[i].z=player.z,player.stateBuffer[i].dx=player.dx,player.stateBuffer[i].dy=player.dy,player.stateBuffer[i].dz=player.dz,player.stateBuffer[i].jumping=player.jumping;var dist=Math.length3(player.x-oldx,player.y-oldy,player.z-oldz);dist<.2?(.02<dist&&(player.corrections=FramesBetweenSyncs,player.corrected.dx=player.x-oldx,player.corrected.dy=player.y-oldy,player.corrected.dz=player.z-oldz),player.x=oldx,player.y=oldy,player.z=oldz,player.dx=olddx,player.dy=olddy,player.dz=olddz):player.corrections=0,player.jumping=wasJumping,player.climbing=wasClimbing,wasJumping&&(player.corrected.dy=0,player.y=oldy,player.dy=olddy),player.yaw=oldYaw,player.pitch=oldPitch,player.controlKeys=oldKeys}else{for(var i=player.stateIdx=0;i<FramesBetweenSyncs;i++)player.stateBuffer[i].controlKeys=input.unPackInt8U(),player.stateBuffer[i].yaw=input.unPackRadU(),player.stateBuffer[i].pitch=input.unPackRad();player.x=x,player.jumping||(player.y=y),player.z=z,player.climbing=climbing}break;"
+  },
+  {
+    "name": "CommCode.fire",
+    "start": 3164137,
+    "end": 3164498,
+    "source": "case CommCode.fire:var id=input.unPackInt8U();tv1.x=input.unPackFloat(),tv1.y=input.unPackFloat(),tv1.z=input.unPackFloat(),tv2.x=input.unPackFloat(),tv2.y=input.unPackFloat(),tv2.z=input.unPackFloat();var seed=input.unPackInt8U(),player=players[id];if(!player)break;id!=meId&&player.weapon.actor.fire(),mathSeed=seed,player.weapon.fireMunitions(tv1,tv2);break;"
+  },
+  {
+    "name": "CommCode.throwGrenade",
+    "start": 3164498,
+    "end": 3164956,
+    "source": "case CommCode.throwGrenade:var id=input.unPackInt8U(),x=input.unPackFloat(),y=input.unPackFloat(),z=input.unPackFloat(),dx=input.unPackFloat(),dy=input.unPackFloat(),dz=input.unPackFloat(),player=players[id];if(!player)break;player.grenadeCount--,id!=meId?(player.actor.head.rotation.x=player.pitch,player.actor.mesh.rotation.y=player.yaw):updateAmmoUi(),player.actor.throwGrenade(),munitionsManager.throwGrenade(player,{x:x,y:y,z:z},{x:dx,y:dy,z:dz});break;"
+  },
+  {
+    "name": "CommCode.reload",
+    "start": 3164956,
+    "end": 3165044,
+    "source": "case CommCode.reload:var id=input.unPackInt8U();players[id]&&players[id].reload();break;"
+  },
+  {
+    "name": "CommCode.swapWeapon",
+    "start": 3165044,
+    "end": 3165179,
+    "source": "case CommCode.swapWeapon:var id=input.unPackInt8U(),weaponIdx=input.unPackInt8U();players[id]&&players[id].swapWeapon(weaponIdx);break;"
+  },
+  {
+    "name": "CommCode.hitMe",
+    "start": 3165179,
+    "end": 3165326,
+    "source": "case CommCode.hitMe:var hp=input.unPackInt8U(),dx=input.unPackFloat(),dz=input.unPackFloat();me.hp=hp,me.actor.hit(),hitIndicator.hit(dx,dz);break;"
+  },
+  {
+    "name": "CommCode.hitThem",
+    "start": 3165326,
+    "end": 3165561,
+    "source": "case CommCode.hitThem:var id=input.unPackInt8U(),hp=input.unPackInt8U(),player=players[id];if(!player)break;var numFrags=Math.min(100,player.hp-hp)/3+5;player.hp=hp,player.actor.hit(),0<hp&&shellFragBurst(player,numFrags,.07,20);break;"
+  },
+  {
+    "name": "CommCode.respawn",
+    "start": 3165561,
+    "end": 3165812,
+    "source": "case CommCode.respawn:var id=input.unPackInt8U(),x=input.unPackFloat(),y=input.unPackFloat(),z=input.unPackFloat(),player=players[id];player&&(player.respawn(x,y,z),id==meId&&console.log(\"CommCode.respawn received from server for this player\"));break;"
+  },
+  {
+    "name": "CommCode.changeCharacter",
+    "start": 3165812,
+    "end": 3166522,
+    "source": "case CommCode.changeCharacter:var id=input.unPackInt8U(),classIdx=input.unPackInt8U(),primaryWeaponIdx=input.unPackInt8U(),secondaryWeaponIdx=input.unPackInt8U(),shellColor=input.unPackInt8U(),hatIdx=input.unPackInt8U(),stampIdx=input.unPackInt8U(),primaryWeaponItem=catalog.findItemBy8BitItemId(ItemType.Primary,classIdx,primaryWeaponIdx),secondaryWeaponItem=catalog.findItemBy8BitItemId(ItemType.Secondary,classIdx,secondaryWeaponIdx),hatItem=catalog.findItemBy8BitItemId(ItemType.Hat,classIdx,hatIdx),stampItem=catalog.findItemBy8BitItemId(ItemType.Stamp,classIdx,stampIdx),player=players[id];player&&player.changeCharacter(classIdx,primaryWeaponItem,secondaryWeaponItem,shellColor,hatItem,stampItem);break;"
+  },
+  {
+    "name": "CommCode.switchTeam",
+    "start": 3166522,
+    "end": 3166879,
+    "source": "case CommCode.switchTeam:var id=input.unPackInt8U(),toTeam=input.unPackInt8U(),player=players[id];if(player){player.team=toTeam,player.score=0,player.kills=0,player.streak=0,player.bestGameStreak=0,id==meId&&(myTeam=toTeam,setTeamButton());for(var i=0;i<playerLimit;i++)(player=players[i])&&player.actor&&player.actor.updateTeam();rebuildPlayerList()}break;"
+  },
+  {
+    "name": "CommCode.switchTeamFail",
+    "start": 3166879,
+    "end": 3167032,
+    "source": "case CommCode.switchTeamFail:openAlertDialog(getLocText(\"ui_game_fairteams_header\"),getLocText(\"ui_game_fairteams_text\"),{label:\"OK\",width:\"8em\"});break;"
+  },
+  {
+    "name": "CommCode.ping",
+    "start": 3167032,
+    "end": 3167435,
+    "source": "case CommCode.ping:ping=Date.now()-pingStartTime,pingTotal+=ping,pingSamples++;var el=document.getElementById(\"ping\");ping<100?el.style.color=\"#0f0\":ping<150?el.style.color=\"#ff0\":ping<200?el.style.color=\"#f90\":el.style.color=\"#f00\",el.innerText=ping+\"ms\",setTimeout(function(){var output=new Comm.output(1);output.packInt8(CommCode.ping),pingStartTime=Date.now(),ws&&ws.send(output.buffer)},1e3);break;"
+  },
+  {
+    "name": "CommCode.notification",
+    "start": 3167435,
+    "end": 3167521,
+    "source": "case CommCode.notification:notify(input.unPackString(),1e3*input.unPackInt8U());break;"
+  },
+  {
+    "name": "CommCode.gameLocked",
+    "start": 3167521,
+    "end": 3167593,
+    "source": "case CommCode.gameLocked:notify(getLocText(\"ui_game_locked\"),1e4);break;"
+  },
+  {
+    "name": "CommCode.updateBalance",
+    "start": 3167593,
+    "end": 3167783,
+    "source": "case CommCode.updateBalance:var newBalance=input.unPackInt32U();console.log(\"updating balance from server: \"+newBalance),playerAccount.currentBalance=newBalance,updateCurrentBalance();break;"
+  },
+  {
+    "name": "CommCode.expireUpgrade",
+    "start": 3167783,
+    "end": 3167867,
+    "source": "case CommCode.expireUpgrade:console.log(\"upgrade has expired\"),checkUpgrade();break;"
+  },
+  {
+    "name": "CommCode.banned",
+    "start": 3252891,
+    "end": 3252994,
+    "source": "case CommCode.banned:message=\"You are not allowed to join this game.<br><br>Maybe you know why?\";break;"
+  },
+  {
+    "name": "CommCode.gameJoined",
+    "start": 3253415,
+    "end": 3253998,
+    "source": "case CommCode.gameJoined:console.log(\"CommCode.gameJoined received\"),document.getElementById(\"mainMenu\").style.display=\"none\",teamScore=[0,0,0],meId=input.unPackInt8U(),myTeam=input.unPackInt8U(),gameType=input.unPackInt8U(),gameId=input.unPackInt16U(),gameKey=input.unPackInt16U(),mapIdx=input.unPackInt8U(),playerLimit=input.unPackInt8U(),isGameOwner=1==input.unPackInt8U(),teamScore[1]=input.unPackInt16U(),teamScore[2]=input.unPackInt16U(),updateTeamUI(),isTeamGame=gameType==GameType.teams||gameType==GameType.ctf,console.log(\"is game owner: \"+isGameOwner),inGame=!0,startGame()"
+  }
+]
