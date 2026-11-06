@@ -9,7 +9,7 @@ import { createCore } from '../server/core.mjs';
 function setup() {
   const B = createCore().BABYLON;
   const engine = new B.NullEngine(), scene = new B.Scene(engine);
-  const camera = new B.FreeCamera('view', B.Vector3.Zero(), scene);
+  const camera = new B.TargetCamera('view', B.Vector3.Zero(), scene);
   scene.activeCamera = camera;
   const material = new B.ShaderMaterial('eggShell', scene, {}, {});
   scene.cloneMesh = (name, parent) => {
@@ -99,5 +99,9 @@ test('rendered egg, nametag and first person camera follow walking, jumping, fal
     Object.assign(s.me, { yaw: .8, pitch: .4 });
     s.render();
     assert.ok(s.camera.getViewMatrix().m.some((v, i) => Math.abs(v - view.m[i]) > .01), 'mouse look changes the rendered view matrix');
+    const forward = s.B.Vector3.TransformNormal(new s.B.Vector3(0, 0, 1), s.camera.getWorldMatrix()).normalize();
+    close(forward.x, Math.sin(s.me.yaw) * Math.cos(s.me.pitch), 'camera yaw');
+    close(forward.y, -Math.sin(s.me.pitch), 'camera pitch');
+    close(forward.z, Math.cos(s.me.yaw) * Math.cos(s.me.pitch), 'camera forward direction');
   } finally { s.dispose(); }
 });
